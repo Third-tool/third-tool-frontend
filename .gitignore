@@ -12,6 +12,11 @@
 /dist
 .vite
 *.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+# tsc-emitted JS artifacts alongside TS sources (noEmit prevents future generation)
+src/**/*.js
+test/**/*.js
 
 # misc
 .DS_Store
