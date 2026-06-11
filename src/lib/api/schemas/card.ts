@@ -41,3 +41,10 @@ export const ScheduleConfigSchema = z.object({
   maxView: z.number().int().positive(),
 });
 export type ScheduleConfig = z.infer<typeof ScheduleConfigSchema>;
+
+export const CreateCardRequestSchema = z.object({
+  summary: z.string().min(1).max(500),
+  keywords: z.array(z.string().min(1)).min(1),
+  tags: z.array(z.string()).default([]),
+});
+export type CreateCardRequest = z.infer<typeof CreateCardRequestSchema>;

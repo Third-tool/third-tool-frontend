@@ -5,6 +5,7 @@ import {
   CardSchema,
   ViewCardResponseSchema,
   ScheduleConfigSchema,
+  CreateCardRequestSchema,
 } from './card';
 
 describe('CardStatusSchema', () => {
@@ -62,5 +63,30 @@ describe('ScheduleConfigSchema', () => {
       maxView: 5,
     });
     expect(s.softScheduleIntervals).toEqual([1, 3, 7]);
+  });
+});
+
+describe('CreateCardRequestSchema', () => {
+  it('parses a minimal valid request', () => {
+    const r = CreateCardRequestSchema.parse({
+      summary: 'JPA 영속성 컨텍스트가 1차 캐시 역할',
+      keywords: ['JPA'],
+      tags: [],
+    });
+    expect(r.keywords).toHaveLength(1);
+  });
+  it('rejects empty keywords', () => {
+    expect(() =>
+      CreateCardRequestSchema.parse({ summary: 'x', keywords: [], tags: [] }),
+    ).toThrow();
+  });
+  it('rejects summary longer than 500', () => {
+    expect(() =>
+      CreateCardRequestSchema.parse({
+        summary: 'x'.repeat(501),
+        keywords: ['k'],
+        tags: [],
+      }),
+    ).toThrow();
   });
 });
