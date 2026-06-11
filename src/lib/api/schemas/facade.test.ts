@@ -3,7 +3,7 @@ import {
   CoverageStatusSchema,
   ProficiencyLevelSchema,
   MaterialTypeSchema,
-  AxisSchema,
+  AxisSchema as _AxisSchema,
   TopicSchema,
   LearningFacadeSchema,
 } from './facade';

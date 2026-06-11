@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   CardStatusSchema,
-  ArchiveReasonSchema,
+  ArchiveReasonSchema as _ArchiveReasonSchema,
   CardSchema,
   ViewCardResponseSchema,
   ScheduleConfigSchema,
