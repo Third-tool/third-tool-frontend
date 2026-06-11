@@ -68,9 +68,9 @@ export function resetCardMockState(): void {
   state.nextId = fresh.nextId;
 }
 
-const dayLabels = ['DAY_1', 'DAY_3', 'DAY_7'] as const;
+type DayLabel = 'DAY_1' | 'DAY_3' | 'DAY_7';
 
-function labelForViewCount(viewCount: number): typeof dayLabels[number] {
+function labelForViewCount(viewCount: number): DayLabel {
   if (viewCount <= 0) return 'DAY_1';
   if (viewCount <= 2) return 'DAY_3';
   return 'DAY_7';
