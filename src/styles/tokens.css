@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  /* Color tokens — generate utilities like bg-canvas, text-cream, etc. */
+  --color-canvas: #1a1410;
+  --color-surface: #221a14;
+  --color-glass: rgba(255, 248, 235, 0.04);
+  --color-edge: rgba(255, 248, 235, 0.08);
+  --color-cream: #f5ead6;
+  --color-cream-mute: rgba(245, 234, 214, 0.62);
+  --color-cream-faint: rgba(245, 234, 214, 0.38);
+  --color-amber: #d97706;
+  --color-amber-soft: rgba(217, 119, 6, 0.12);
+
+  /* Font families — generate font-ko, font-display utilities */
+  --font-ko: 'Pretendard Variable', Pretendard, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Cabinet Grotesk', 'Pretendard Variable', ui-sans-serif, sans-serif;
+
+  /* Easing curve token */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Radius tokens */
+  --radius-card-outer: 2rem;
+  --radius-card-inner: 1.625rem;
+  --radius-pill: 9999px;
+}
+
+@layer base {
+  :root {
+    --section-py: clamp(6rem, 10vw, 10rem);
+    --container-max: 80rem;
+    --dur-fast: 240ms;
+    --dur-base: 480ms;
+    --dur-slow: 720ms;
+    --shadow-card-inset: inset 0 1px 1px rgba(255, 248, 235, 0.12);
+    --shadow-lift: 0 24px 48px -24px rgba(20, 12, 6, 0.6);
+    --tracking-eyebrow: 0.15em;
+  }
+}
