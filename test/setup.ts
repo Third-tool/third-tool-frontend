@@ -1,10 +1,14 @@
 import '@testing-library/jest-dom/vitest';
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { server } from '@/mocks/node';
 
+beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {
   cleanup();
+  server.resetHandlers();
 });
+afterAll(() => server.close());
 
 class MockIntersectionObserver {
   readonly root: Element | null = null;
