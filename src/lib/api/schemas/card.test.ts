@@ -69,7 +69,9 @@ describe('ScheduleConfigSchema', () => {
 describe('CreateCardRequestSchema', () => {
   it('parses a minimal valid request', () => {
     const r = CreateCardRequestSchema.parse({
+      deckId: '1',
       summary: 'JPA 영속성 컨텍스트가 1차 캐시 역할',
+      mainText: 'body',
       keywords: ['JPA'],
       tags: [],
     });
@@ -77,13 +79,21 @@ describe('CreateCardRequestSchema', () => {
   });
   it('rejects empty keywords', () => {
     expect(() =>
-      CreateCardRequestSchema.parse({ summary: 'x', keywords: [], tags: [] }),
+      CreateCardRequestSchema.parse({
+        deckId: '1',
+        summary: 'x',
+        mainText: 'body',
+        keywords: [],
+        tags: [],
+      }),
     ).toThrow();
   });
   it('rejects summary longer than 500', () => {
     expect(() =>
       CreateCardRequestSchema.parse({
+        deckId: '1',
         summary: 'x'.repeat(501),
+        mainText: 'body',
         keywords: ['k'],
         tags: [],
       }),

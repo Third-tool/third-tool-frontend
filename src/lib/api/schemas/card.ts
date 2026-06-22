@@ -3,16 +3,23 @@ import { z } from 'zod';
 export const CardStatusSchema = z.enum(['ON_FIELD', 'ARCHIVE']);
 export type CardStatus = z.infer<typeof CardStatusSchema>;
 
-export const ArchiveReasonSchema = z.enum(['MAX_VIEW', 'MAX_DURATION']);
+export const ArchiveReasonSchema = z.enum(['MANUAL', 'MAX_VIEW', 'MAX_DURATION']);
 export type ArchiveReason = z.infer<typeof ArchiveReasonSchema>;
 
+export const MainContentTypeSchema = z.enum(['TEXT', 'IMAGE', 'BOTH']);
+export type MainContentType = z.infer<typeof MainContentTypeSchema>;
+
+// FE-facing tag shape used inside Card. Backend returns { id, value, linkedAt } —
+// the endpoint adapter normalizes it to this shape.
 export const TagSchema = z.object({
-  tagId: z.string(),
+  tagId: z.coerce.string(),
   name: z.string(),
 });
+export type TagOnCard = z.infer<typeof TagSchema>;
 
 export const CardSchema = z.object({
-  cardId: z.string(),
+  cardId: z.coerce.string(),
+  deckId: z.coerce.string().optional(),
   status: CardStatusSchema,
   enteredFieldAt: z.string(),
   viewCount: z.number().int().nonnegative(),
@@ -42,9 +49,92 @@ export const ScheduleConfigSchema = z.object({
 });
 export type ScheduleConfig = z.infer<typeof ScheduleConfigSchema>;
 
+// Frontend create request — assembled in the form. The endpoint layer
+// transforms it into Backend's CardRequest.Create shape (mainNote object,
+// keyword string list, tag value list) and posts to /api/v1/decks/{deckId}/cards.
 export const CreateCardRequestSchema = z.object({
+  deckId: z.coerce.string(),
   summary: z.string().min(1).max(500),
   keywords: z.array(z.string().min(1)).min(1),
-  tags: z.array(z.string()).default([]),
+  tags: z.array(z.string()).max(3).default([]),
+  mainText: z.string().min(1),
 });
 export type CreateCardRequest = z.infer<typeof CreateCardRequestSchema>;
+
+// ─── Raw backend shapes ─────────────────────────────────────────────────────
+// These mirror Java records in Card/presentation/dto/CardResponse.java.
+
+const RawKeywordDtoSchema = z.object({
+  id: z.coerce.string(),
+  value: z.string(),
+});
+
+const RawTagDtoSchema = z.object({
+  id: z.coerce.string(),
+  value: z.string(),
+  linkedAt: z.string().nullable().optional(),
+});
+
+const RawMainNoteDtoSchema = z.object({
+  textContent: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  contentType: MainContentTypeSchema,
+});
+
+export const RawCardDetailSchema = z.object({
+  cardId: z.coerce.string(),
+  deckId: z.coerce.string(),
+  mainNote: RawMainNoteDtoSchema,
+  keywords: z.array(RawKeywordDtoSchema),
+  summary: z.string(),
+  tags: z.array(RawTagDtoSchema),
+  status: CardStatusSchema,
+  enteredFieldAt: z.string(),
+  viewCount: z.number().int().nonnegative(),
+  lastViewedAt: z.string().nullable().optional(),
+  createdDate: z.string().optional(),
+  updatedDate: z.string().optional(),
+});
+export type RawCardDetail = z.infer<typeof RawCardDetailSchema>;
+
+export const RawCardSummarySchema = z.object({
+  cardId: z.coerce.string(),
+  keywords: z.array(RawKeywordDtoSchema),
+  summary: z.string(),
+  tags: z.array(RawTagDtoSchema),
+  contentType: MainContentTypeSchema,
+  status: CardStatusSchema,
+  enteredFieldAt: z.string(),
+  viewCount: z.number().int().nonnegative(),
+  lastViewedAt: z.string().nullable().optional(),
+  createdDate: z.string().optional(),
+});
+export type RawCardSummary = z.infer<typeof RawCardSummarySchema>;
+
+export function adaptCardDetail(raw: RawCardDetail): Card {
+  return {
+    cardId: raw.cardId,
+    deckId: raw.deckId,
+    status: raw.status,
+    enteredFieldAt: raw.enteredFieldAt,
+    viewCount: raw.viewCount,
+    summary: raw.summary,
+    keywords: raw.keywords.map((k) => k.value),
+    tags: raw.tags.map((t) => ({ tagId: t.id, name: t.value })),
+    lastViewedAt: raw.lastViewedAt ?? null,
+  };
+}
+
+export function adaptCardSummary(raw: RawCardSummary, deckId?: string): Card {
+  return {
+    cardId: raw.cardId,
+    deckId,
+    status: raw.status,
+    enteredFieldAt: raw.enteredFieldAt,
+    viewCount: raw.viewCount,
+    summary: raw.summary,
+    keywords: raw.keywords.map((k) => k.value),
+    tags: raw.tags.map((t) => ({ tagId: t.id, name: t.value })),
+    lastViewedAt: raw.lastViewedAt ?? null,
+  };
+}

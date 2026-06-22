@@ -16,7 +16,7 @@ export function ProgressIndicator({ current, total, stateLabel }: Props) {
       <span className="font-display tracking-wide">
         <span className="text-cream">{current}</span> / {total}
       </span>
-      <span className="rounded-full bg-amber-soft px-3 py-1 text-xs uppercase tracking-[var(--tracking-eyebrow)] text-amber">
+      <span className="rounded-full border border-edge bg-glass px-3 py-1 font-mono text-[10px] uppercase tracking-[var(--tracking-mono)] text-cream-mute">
         {stateLabel} · {labelKo[stateLabel]}
       </span>
     </div>

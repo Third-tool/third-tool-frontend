@@ -6,19 +6,19 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function Card({ interactive, className, children, ...rest }: CardProps) {
-  const outer = [
-    'rounded-[var(--radius-card-outer)] bg-glass ring-1 ring-edge p-1.5 transition-all duration-[var(--dur-base)] ease-[var(--ease-spring)]',
-    interactive ? 'hover:-translate-y-1 hover:bg-[rgba(255,248,235,0.06)]' : '',
+  const cls = [
+    'rounded-[var(--radius-card-outer)] bg-surface border border-edge p-6 transition-all duration-[var(--dur-base)] ease-[var(--ease-spring)]',
+    interactive
+      ? 'hover:-translate-y-[3px] hover:border-amber-line hover:shadow-[var(--shadow-card)] cursor-pointer'
+      : '',
     className ?? '',
   ]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <div className={outer} {...rest}>
-      <div className="rounded-[var(--radius-card-inner)] bg-surface p-6 shadow-[var(--shadow-card-inset)]">
-        {children}
-      </div>
+    <div className={cls} {...rest}>
+      {children}
     </div>
   );
 }

@@ -1,13 +1,23 @@
 export type ToastTone = 'default' | 'amber' | 'cream';
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastInput {
   message: string;
   tone?: ToastTone;
   durationMs?: number;
+  action?: ToastAction;
 }
 
-export interface Toast extends Required<ToastInput> {
+export interface Toast {
   id: string;
+  message: string;
+  tone: ToastTone;
+  durationMs: number;
+  action: ToastAction | null;
 }
 
 type Listener = (toasts: Toast[]) => void;
@@ -33,7 +43,8 @@ export function createToastStore(): ToastStore {
         id,
         message: input.message,
         tone: input.tone ?? 'default',
-        durationMs: input.durationMs ?? 2200,
+        durationMs: input.durationMs ?? (input.action ? 5000 : 2200),
+        action: input.action ?? null,
       };
       toasts = [...toasts, next];
       emit();

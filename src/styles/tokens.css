@@ -1,39 +1,69 @@
+/* ============================================================
+   third — Warm "Claude" redesign · Tailwind v4 design tokens
+   Drop-in replacement; token NAMES kept identical so existing
+   utilities (text-cream, bg-canvas, bg-surface, border-edge,
+   text-amber …) re-skin automatically. Meanings flip from a
+   dark/violet theme to a light warm-paper/clay theme.
+   ============================================================ */
+
 @import "tailwindcss";
 
+/* Fonts — load before @theme */
+@import url("https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap");
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css");
+
 @theme {
-  /* Color tokens — generate utilities like bg-canvas, text-cream, etc. */
-  --color-canvas: #1a1410;
-  --color-surface: #221a14;
-  --color-glass: rgba(255, 248, 235, 0.04);
-  --color-edge: rgba(255, 248, 235, 0.08);
-  --color-cream: #f5ead6;
-  --color-cream-mute: rgba(245, 234, 214, 0.62);
-  --color-cream-faint: rgba(245, 234, 214, 0.38);
-  --color-amber: #d97706;
-  --color-amber-soft: rgba(217, 119, 6, 0.12);
+  /* ---- Surfaces (light, warm paper) ---- */
+  --color-canvas: #faf8f3;
+  --color-paper: #faf8f3;
+  --color-paper-2: #f3efe6;
+  --color-surface: #fffefb;
+  --color-glass: rgba(33, 31, 26, 0.04);
+  --color-edge: rgba(33, 31, 26, 0.10);
+  --color-edge-strong: rgba(33, 31, 26, 0.16);
 
-  /* Font families — generate font-ko, font-display utilities */
+  /* ---- Foreground — "cream" name kept, now warm ink ---- */
+  --color-cream: #211f1a;
+  --color-cream-mute: #57534a;
+  --color-cream-faint: #8d8779;
+
+  /* ---- Accent — "amber" name kept, now clay/terracotta ---- */
+  --color-amber: #c4673f;
+  --color-amber-deep: #a8512e;
+  --color-amber-soft: rgba(196, 103, 63, 0.12);
+  --color-amber-line: rgba(196, 103, 63, 0.30);
+
+  /* ---- Success / "mastered" ---- */
+  --color-sage: #7d9472;
+  --color-sage-soft: rgba(125, 148, 114, 0.16);
+  --color-sage-ink: #5a6e51;
+
+  /* ---- Type ---- */
   --font-ko: 'Pretendard Variable', Pretendard, ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Cabinet Grotesk', 'Pretendard Variable', ui-sans-serif, sans-serif;
+  --font-display: 'Newsreader', Georgia, serif;
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-mono: 'Pretendard Variable', ui-monospace, monospace;
 
-  /* Easing curve token */
-  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  /* ---- Motion ---- */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Radius tokens */
-  --radius-card-outer: 2rem;
-  --radius-card-inner: 1.625rem;
+  /* ---- Radius (softer, smaller) ---- */
+  --radius-card-outer: 1.25rem;
+  --radius-card-inner: 1rem;
   --radius-pill: 9999px;
 }
 
 @layer base {
   :root {
-    --section-py: clamp(6rem, 10vw, 10rem);
-    --container-max: 80rem;
-    --dur-fast: 240ms;
-    --dur-base: 480ms;
-    --dur-slow: 720ms;
-    --shadow-card-inset: inset 0 1px 1px rgba(255, 248, 235, 0.12);
-    --shadow-lift: 0 24px 48px -24px rgba(20, 12, 6, 0.6);
-    --tracking-eyebrow: 0.15em;
+    --section-py: clamp(5rem, 9vw, 8rem);
+    --container-max: 71.25rem;
+    --dur-fast: 200ms;
+    --dur-base: 280ms;
+    --dur-slow: 600ms;
+    --shadow-card: 0 18px 40px -28px rgba(33, 31, 26, 0.40);
+    --shadow-lift: 0 30px 70px -36px rgba(33, 31, 26, 0.45);
+    --tracking-eyebrow: 0.08em;
+    /* legacy alias — kept for files still referencing tracking-mono until per-screen refactor */
+    --tracking-mono: 0.08em;
   }
 }

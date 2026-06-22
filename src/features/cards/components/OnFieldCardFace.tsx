@@ -16,8 +16,8 @@ export function OnFieldCardFace({ summary, keywords, tags = [], viewCount, maxVi
   return (
     <Card>
       {lastExposure && (
-        <div className="mb-4 rounded-full bg-amber-soft px-3 py-1 text-xs text-amber">
-          이번이 마지막 노출입니다.
+        <div className="mb-4 inline-flex rounded-full border border-edge bg-glass px-3 py-1 font-mono text-[10px] uppercase tracking-[var(--tracking-mono)] text-cream-mute">
+          이번이 마지막 노출입니다
         </div>
       )}
       <p className="font-display text-3xl leading-snug text-cream break-keep md:text-4xl">
