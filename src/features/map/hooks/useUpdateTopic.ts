@@ -6,6 +6,7 @@ import { track } from '@/lib/analytics/track';
 import type { UpdateTopicRequest } from '@/lib/api/schemas/facade';
 
 interface Params {
+  axisId: string;
   topicId: string;
   payload: UpdateTopicRequest;
 }
@@ -13,7 +14,8 @@ interface Params {
 export function useUpdateTopic() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ topicId, payload }: Params) => updateTopic(topicId, payload),
+    mutationFn: ({ axisId, topicId, payload }: Params) =>
+      updateTopic(axisId, topicId, payload),
     onSuccess: (res) => {
       track('topic_revised', {
         topicId: res.topicId,

@@ -10,14 +10,16 @@ interface Props {
   requireConcept?: boolean;
 }
 
+// Backend ErrorCode short codes (Common/Exception/ErrorCode/ErrorCode.java).
 const AUTH_FAIL_CODES = new Set([
-  'AUTH_TOKEN_MISSING',
-  'AUTH_TOKEN_INVALID',
-  'AUTH_TOKEN_EXPIRED',
-  'AUTH_USER_NOT_FOUND',
-  'REFRESH_TOKEN_INVALID',
-  'REFRESH_TOKEN_NOT_FOUND',
-  'REFRESH_FAILED',
+  'AUTH001', // AUTH_TOKEN_MISSING
+  'AUTH002', // AUTH_TOKEN_EXPIRED
+  'AUTH003', // AUTH_TOKEN_INVALID
+  'AUTH004', // AUTH_USER_NOT_FOUND
+  'AUTH101', // REFRESH_TOKEN_INVALID
+  'AUTH102', // REFRESH_TOKEN_NOT_FOUND
+  'AUTH103', // REFRESH_TOKEN_REUSED
+  'AUTH104', // REFRESH_TOKEN_MISSING
 ]);
 
 export function ProtectedRoute({ children, requireConcept = false }: Props) {

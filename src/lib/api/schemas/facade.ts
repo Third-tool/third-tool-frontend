@@ -14,7 +14,7 @@ export type MaterialType = z.infer<typeof MaterialTypeSchema>;
 export const TopicSchema = z.object({
   topicId: z.string(),
   name: z.string(),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   displayOrder: z.number().int().nonnegative(),
   coverageStatus: CoverageStatusSchema,
   isFocused: z.boolean().default(false),
@@ -47,13 +47,32 @@ export const LearningFacadeSchema = z.object({
 });
 export type LearningFacade = z.infer<typeof LearningFacadeSchema>;
 
-export const ConceptResponseSchema = z.object({
+// POST /api/v1/learning-facade { concept } — creates the (unique-per-user) facade
+export const CreateFacadeRequestSchema = z.object({
+  concept: z.string().min(1),
+});
+export type CreateFacadeRequest = z.infer<typeof CreateFacadeRequestSchema>;
+
+export const CreateFacadeResponseSchema = z.object({
+  facadeId: z.string(),
+  concept: z.string(),
+  createdAt: z.string().optional(),
+});
+export type CreateFacadeResponse = z.infer<typeof CreateFacadeResponseSchema>;
+
+// PATCH /api/v1/learning-facade/concept { concept } — updates existing concept
+export const UpdateConceptRequestSchema = z.object({
+  concept: z.string().min(1),
+});
+export type UpdateConceptRequest = z.infer<typeof UpdateConceptRequestSchema>;
+
+export const UpdateConceptResponseSchema = z.object({
   facadeId: z.string(),
   concept: z.string(),
   changed: z.boolean(),
   updatedAt: z.string().optional(),
 });
-export type ConceptResponse = z.infer<typeof ConceptResponseSchema>;
+export type UpdateConceptResponse = z.infer<typeof UpdateConceptResponseSchema>;
 
 export const AxisCreateResponseSchema = z.object({
   axisId: z.string(),
@@ -64,39 +83,24 @@ export const AxisCreateResponseSchema = z.object({
 });
 export type AxisCreateResponse = z.infer<typeof AxisCreateResponseSchema>;
 
-export const AxisSuggestionSchema = z.object({
-  description: z.string(),
-  rationale: z.string(),
+// POST /api/v1/learning-facade/axes/{axisId}/topics — single topic per call
+export const CreateTopicRequestSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
 });
-export type AxisSuggestion = z.infer<typeof AxisSuggestionSchema>;
+export type CreateTopicRequest = z.infer<typeof CreateTopicRequestSchema>;
 
-export const AxisSuggestionResponseSchema = z.object({
-  suggestions: z.array(AxisSuggestionSchema),
-  suggestionsAvailable: z.boolean(),
-  provider_context: z.string().optional(),
-});
-export type AxisSuggestionResponse = z.infer<typeof AxisSuggestionResponseSchema>;
-
-export const CreateTopicsRequestSchema = z.object({
-  topics: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        description: z.string().nullable().optional(),
-      }),
-    )
-    .min(1),
-});
-export type CreateTopicsRequest = z.infer<typeof CreateTopicsRequestSchema>;
-
-export const CreateTopicsResponseSchema = z.object({
-  topics: z.array(TopicSchema),
+export const CreateTopicResponseSchema = z.object({
+  topicId: z.string(),
+  axisId: z.string().optional(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  displayOrder: z.number().int().nonnegative(),
+  coverageStatus: CoverageStatusSchema,
+  isFocused: z.boolean().default(false),
   isTopicCountExceedsRecommended: z.boolean().optional(),
 });
-export type CreateTopicsResponse = z.infer<typeof CreateTopicsResponseSchema>;
-
-export const TopicSuggestionResponseSchema = AxisSuggestionResponseSchema;
-export type TopicSuggestionResponse = AxisSuggestionResponse;
+export type CreateTopicResponse = z.infer<typeof CreateTopicResponseSchema>;
 
 export const MaterialBaseSchema = z.object({
   materialId: z.string(),
@@ -106,16 +110,19 @@ export const MaterialBaseSchema = z.object({
 });
 export type MaterialBase = z.infer<typeof MaterialBaseSchema>;
 
+// POST /api/v1/learning-facade/materials — BE expects materialType / linkedTopicIds / webSource / memo
 export const CreateMaterialRequestSchema = z.object({
   name: z.string().min(1),
-  type: MaterialTypeSchema,
-  topicIds: z.array(z.string()).default([]),
+  materialType: MaterialTypeSchema,
+  linkedTopicIds: z.array(z.string()).default([]),
+  url: z.string().optional(),
   author: z.string().optional(),
   platform: z.string().optional(),
-  url: z.string().optional(),
   aiProvider: z.string().optional(),
-  source: z.string().optional(),
-  note: z.string().optional(),
+  webSource: z.string().optional(),
+  memo: z.string().optional(),
+  deckName: z.string().max(100).optional(),
+  forceCreateDeck: z.boolean().optional(),
 });
 export type CreateMaterialRequest = z.infer<typeof CreateMaterialRequestSchema>;
 
@@ -127,8 +134,8 @@ export const UpdatedTopicCoverageSchema = z.object({
 export const CreateMaterialResponseSchema = z.object({
   materialId: z.string(),
   name: z.string(),
-  type: MaterialTypeSchema,
-  topicIds: z.array(z.string()),
+  materialType: MaterialTypeSchema,
+  linkedTopicIds: z.array(z.string()),
   deckId: z.string(),
   deckAutoCreated: z.boolean(),
   proficiencyLevel: ProficiencyLevelSchema,
@@ -151,7 +158,7 @@ export type RevisionReasonsResponse = z.infer<typeof RevisionReasonsResponseSche
 export const UpdateTopicRequestSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  revisionReasonId: z.number().int().positive().nullable().optional(),
+  revisionReasonOptionId: z.number().int().positive().nullable().optional(),
 });
 export type UpdateTopicRequest = z.infer<typeof UpdateTopicRequestSchema>;
 

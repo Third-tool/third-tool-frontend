@@ -6,9 +6,10 @@ import { track } from '@/lib/analytics/track';
 import { useSignup } from '../hooks/useSignup';
 import { AuthField } from './AuthField';
 
+// Keyed by backend ErrorCode short codes (ErrorCode.java).
 const ERROR_COPY: Record<string, string> = {
-  USER_ALREADY_EXISTS: '이미 자리가 있는 이메일이에요. 로그인으로 이어가볼까요?',
-  USER_VALIDATION: '모든 필드를 채워주세요',
+  USER003: '이미 자리가 있는 이메일이에요. 로그인으로 이어가볼까요?', // USER_ALREADY_EXISTS
+  C001: '모든 필드를 채워주세요', // INVALID_INPUT
 };
 
 export function SignupForm() {

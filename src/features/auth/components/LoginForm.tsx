@@ -7,12 +7,13 @@ import { useLogin } from '../hooks/useLogin';
 import { AuthField } from './AuthField';
 import { SocialLoginRow } from './SocialLoginRow';
 
+// Keyed by backend ErrorCode short codes (ErrorCode.java).
 const ERROR_COPY: Record<string, string> = {
-  USER_NOT_FOUND: '이메일과 비밀번호를 다시 확인해주세요',
-  PASSWORD_NOT_MATCHED: '이메일과 비밀번호를 다시 확인해주세요',
-  USER_LOCKED: '계정 보호를 위해 잠시 잠겨 있어요',
-  USER_IS_SOCIAL: '소셜 로그인 계정이에요. 아래 버튼으로 이어가주세요',
-  AUTH_VALIDATION: '이메일과 비밀번호를 입력해주세요',
+  USER001: '이메일과 비밀번호를 다시 확인해주세요', // USER_NOT_FOUND
+  USER005: '이메일과 비밀번호를 다시 확인해주세요', // PASSWORD_NOT_MATCHED
+  USER004: '계정 보호를 위해 잠시 잠겨 있어요', // USER_LOCKED
+  USER006: '소셜 로그인 계정이에요. 아래 버튼으로 이어가주세요', // USER_IS_SOCIAL
+  C001: '이메일과 비밀번호를 입력해주세요', // INVALID_INPUT
 };
 
 export function LoginForm() {
@@ -23,7 +24,7 @@ export function LoginForm() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
 
-  const next = search.get('next') ?? '/study';
+  const next = search.get('next') ?? '/home';
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

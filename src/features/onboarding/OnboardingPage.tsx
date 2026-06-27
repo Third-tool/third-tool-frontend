@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '@/components/Icon';
 import { ApiError } from '@/lib/api/client';
 import { track } from '@/lib/analytics/track';
-import { createAxis, createConcept } from '@/lib/api/endpoints/facade';
+import { createAxis, createFacade } from '@/lib/api/endpoints/facade';
 import { LEARNING_FACADE_KEY } from '@/features/auth/hooks/useLearningFacade';
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
@@ -105,14 +105,14 @@ export function OnboardingPage() {
 
   const save = useMutation({
     mutationFn: async (payload: { statement: string; bridge: string; method: 'declare' | 'skip' }) => {
-      await createConcept(payload.statement);
+      await createFacade(payload.statement);
       if (payload.bridge.trim()) await createAxis(payload.bridge.trim());
       return payload;
     },
-    onSuccess: (payload) => {
-      qc.invalidateQueries({ queryKey: LEARNING_FACADE_KEY });
+    onSuccess: async (payload) => {
+      await qc.invalidateQueries({ queryKey: LEARNING_FACADE_KEY });
       track('onboarding_completed', { method: payload.method, conceptCount: concepts.length });
-      navigate('/home', { replace: true });
+      navigate('/map', { replace: true });
     },
     onError: (err) => {
       const code = err instanceof ApiError ? err.code : 'UNKNOWN';

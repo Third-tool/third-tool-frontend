@@ -11,8 +11,8 @@ export function useCreateMaterial() {
     onSuccess: (res, vars) => {
       track('material_created', {
         materialId: res.materialId,
-        type: vars.type,
-        topicCount: res.topicIds.length,
+        materialType: vars.materialType,
+        topicCount: res.linkedTopicIds.length,
         deckAutoCreated: res.deckAutoCreated,
       });
       if (res.deckAutoCreated) {

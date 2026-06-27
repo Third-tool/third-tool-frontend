@@ -5,12 +5,23 @@ export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
   readonly requestId: string | null;
-  constructor(code: string, message: string, status: number, requestId: string | null = null) {
+  readonly path: string | null;
+  readonly timestamp: string | null;
+  constructor(
+    code: string,
+    message: string,
+    status: number,
+    requestId: string | null = null,
+    path: string | null = null,
+    timestamp: string | null = null,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
     this.status = status;
     this.requestId = requestId;
+    this.path = path;
+    this.timestamp = timestamp;
   }
 }
 
@@ -87,17 +98,28 @@ export function createApiClient(options: CreateApiClientOptions = {}): AxiosInst
     (response) => response,
     async (error: AxiosError) => {
       const r = error.response;
-      const data = (r?.data ?? {}) as { code?: string; message?: string };
+      const data = (r?.data ?? {}) as {
+        code?: string;
+        message?: string;
+        path?: string;
+        timestamp?: string;
+      };
       const status = r?.status ?? 0;
       const code = data.code;
       const requestId = extractRequestId(error);
+      const path = typeof data.path === 'string' ? data.path : null;
+      const timestamp = typeof data.timestamp === 'string' ? data.timestamp : null;
+      if (import.meta.env.DEV && requestId && status >= 500) {
+        // eslint-disable-next-line no-console
+        console.warn(`[api] ${status} ${code ?? 'UNKNOWN'} requestId=${requestId}`);
+      }
 
       if (status === 401 && code && REFRESH_RECOVERABLE_CODES.has(code)) {
         const original = error.config as RetriableConfig | undefined;
         if (!original || original._retry) {
           handleSessionLost();
           return Promise.reject(
-            new ApiError(code, data.message ?? 'session expired', status, requestId),
+            new ApiError(code, data.message ?? 'session expired', status, requestId, path, timestamp),
           );
         }
         original._retry = true;
@@ -111,7 +133,7 @@ export function createApiClient(options: CreateApiClientOptions = {}): AxiosInst
           handleSessionLost();
           if (refreshErr instanceof ApiError) return Promise.reject(refreshErr);
           return Promise.reject(
-            new ApiError('AUTH101', 'refresh failed', 401, requestId),
+            new ApiError('AUTH101', 'refresh failed', 401, requestId, path, timestamp),
           );
         }
       }
@@ -126,16 +148,18 @@ export function createApiClient(options: CreateApiClientOptions = {}): AxiosInst
       }
 
       if (code) {
-        return Promise.reject(new ApiError(code, data.message ?? 'Unknown error', status, requestId));
+        return Promise.reject(
+          new ApiError(code, data.message ?? 'Unknown error', status, requestId, path, timestamp),
+        );
       }
       if (status === 503) {
         return Promise.reject(
-          new ApiError('MAINTENANCE', 'maintenance', status, requestId),
+          new ApiError('MAINTENANCE', 'maintenance', status, requestId, path, timestamp),
         );
       }
       if (status >= 500) {
         return Promise.reject(
-          new ApiError('INTERNAL_ERROR', error.message ?? 'internal error', status, requestId),
+          new ApiError('INTERNAL_ERROR', error.message ?? 'internal error', status, requestId, path, timestamp),
         );
       }
       return Promise.reject(error);

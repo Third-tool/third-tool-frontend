@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 
 interface MockTopic {
   topicId: string;
+  axisId: string;
   name: string;
   description: string | null;
   displayOrder: number;
@@ -19,15 +20,16 @@ interface MockAxis {
 
 interface MockMaterial {
   materialId: string;
-  type: 'BOOK' | 'COURSE' | 'AI_CONVERSATION' | 'WEB_RESOURCE';
+  materialType: 'BOOK' | 'COURSE' | 'AI_CONVERSATION' | 'WEB_RESOURCE';
   name: string;
-  topicIds: string[];
+  linkedTopicIds: string[];
   proficiencyLevel: null | 'UNFAMILIAR' | 'FAMILIARIZING' | 'MASTERED';
   deckId: string;
 }
 
 interface FacadeState {
   facadeId: string;
+  exists: boolean;
   concept: string | null;
   axes: MockAxis[];
   materials: MockMaterial[];
@@ -40,6 +42,7 @@ interface FacadeState {
 function seed(): FacadeState {
   return {
     facadeId: 'facade-1',
+    exists: false,
     concept: null,
     axes: [],
     materials: [],
@@ -55,22 +58,6 @@ const state: FacadeState = seed();
 export function resetFacadeMockState(): void {
   Object.assign(state, seed());
 }
-
-const AXIS_SUGGESTIONS: ReadonlyArray<{ description: string; rationale: string }> = [
-  { description: '데이터 모델링', rationale: '시스템의 근간이 되는 영역' },
-  { description: '분산 시스템', rationale: '확장성 설계의 핵심' },
-  { description: 'API 설계', rationale: '서비스 경계의 명확성' },
-  { description: '인프라와 운영', rationale: '시스템이 실제로 사는 환경' },
-  { description: '도메인 설계', rationale: '비즈니스를 코드로 표현하는 축' },
-];
-
-const TOPIC_SUGGESTIONS: ReadonlyArray<{ description: string; rationale: string }> = [
-  { description: '도메인 중심 설계', rationale: '비즈니스를 코드로 표현하는 출발점' },
-  { description: '정규화와 역정규화', rationale: '데이터 무결성과 성능의 균형' },
-  { description: '인덱스 전략', rationale: '쿼리 패턴을 미리 그려보는 작업' },
-  { description: '트랜잭션 격리 수준', rationale: '동시성 문제의 본질을 이해' },
-  { description: '이벤트 소싱', rationale: '상태 변화를 사실로 다루는 관점' },
-];
 
 const REVISION_REASONS = [
   { id: 1, label: '기존 표현이 너무 좁았다', displayOrder: 1 },
@@ -103,16 +90,22 @@ function computeCoverage(): {
   };
 }
 
-function findTopic(topicId: string): MockTopic | undefined {
-  for (const axis of state.axes) {
-    const found = axis.topics.find((t) => t.topicId === topicId);
-    if (found) return found;
-  }
-  return undefined;
+function findAxis(axisId: string): MockAxis | undefined {
+  return state.axes.find((a) => a.axisId === axisId);
+}
+
+function findTopicInAxis(axis: MockAxis, topicId: string): MockTopic | undefined {
+  return axis.topics.find((t) => t.topicId === topicId);
 }
 
 export const facadeHandlers = [
-  http.get('/api/learning-facade', () => {
+  http.get('/api/v1/learning-facade', () => {
+    if (!state.exists) {
+      return HttpResponse.json(
+        { code: 'LF001', message: '학습 Facade를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
     return HttpResponse.json({
       facadeId: state.facadeId,
       concept: state.concept,
@@ -123,7 +116,7 @@ export const facadeHandlers = [
         topics: a.topics.map((t) => ({
           topicId: t.topicId,
           name: t.name,
-          description: t.description ?? undefined,
+          description: t.description,
           displayOrder: t.displayOrder,
           coverageStatus: t.coverageStatus,
           isFocused: t.isFocused,
@@ -133,29 +126,59 @@ export const facadeHandlers = [
     });
   }),
 
-  http.post('/api/learning-facade/concept', async ({ request }) => {
-    const body = (await request.json()) as { concept?: string };
+  http.post('/api/v1/learning-facade', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { concept?: string };
     const trimmed = body.concept?.trim();
     if (!trimmed) {
       return HttpResponse.json(
-        { code: 'LF_CONCEPT_REQUIRED', message: '직업적 컨셉을 입력해주세요' },
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
         { status: 400 },
       );
     }
-    const changed = state.concept !== trimmed;
+    if (state.exists) {
+      return HttpResponse.json(
+        { code: 'LF002', message: '이미 Facade가 존재합니다.' },
+        { status: 409 },
+      );
+    }
+    state.exists = true;
     state.concept = trimmed;
     return HttpResponse.json(
       {
         facadeId: state.facadeId,
         concept: trimmed,
-        changed,
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       },
       { status: 201 },
     );
   }),
 
-  http.post('/api/learning-facade/axes', async ({ request }) => {
+  http.patch('/api/v1/learning-facade/concept', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { concept?: string };
+    const trimmed = body.concept?.trim();
+    if (!trimmed) {
+      return HttpResponse.json(
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { status: 400 },
+      );
+    }
+    if (!state.exists) {
+      return HttpResponse.json(
+        { code: 'LF001', message: '학습 Facade를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    const changed = state.concept !== trimmed;
+    state.concept = trimmed;
+    return HttpResponse.json({
+      facadeId: state.facadeId,
+      concept: trimmed,
+      changed,
+      updatedAt: new Date().toISOString(),
+    });
+  }),
+
+  http.post('/api/v1/learning-facade/axes', async ({ request }) => {
     const body = (await request.json()) as { name?: string };
     const trimmed = body.name?.trim();
     if (!trimmed) {
@@ -169,6 +192,9 @@ export const facadeHandlers = [
         { code: 'LEARNING_AXIS_DUPLICATE_NAME', message: '이미 같은 이름의 축이 있습니다' },
         { status: 409 },
       );
+    }
+    if (!state.exists) {
+      state.exists = true;
     }
     const axisId = `axis-${state.nextAxisId++}`;
     const axis: MockAxis = {
@@ -190,156 +216,146 @@ export const facadeHandlers = [
     );
   }),
 
-  http.post('/api/learning-facade/axes/suggestions', async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as { limit?: number };
-    const limit = Math.min(Math.max(body.limit ?? 5, 1), 5);
-    return HttpResponse.json({
-      suggestions: AXIS_SUGGESTIONS.slice(0, limit),
-      suggestionsAvailable: true,
-      provider_context: 'none',
-    });
-  }),
-
-  http.post('/api/learning-facade/axes/:axisId/topics', async ({ params, request }) => {
+  http.post('/api/v1/learning-facade/axes/:axisId/topics', async ({ params, request }) => {
     const axisId = params.axisId as string;
-    const axis = state.axes.find((a) => a.axisId === axisId);
+    const axis = findAxis(axisId);
     if (!axis) {
       return HttpResponse.json(
         { code: 'LF_AXIS_NOT_FOUND', message: '축을 찾을 수 없습니다' },
         { status: 404 },
       );
     }
-    const body = (await request.json()) as {
-      topics?: Array<{ name?: string; description?: string | null }>;
-    };
-    const incoming = (body.topics ?? []).map((t) => ({
-      name: t.name?.trim() ?? '',
-      description: t.description ?? null,
-    }));
-    if (incoming.length === 0 || incoming.some((t) => !t.name)) {
+    const body = (await request.json()) as { name?: string; description?: string | null };
+    const trimmed = body.name?.trim();
+    if (!trimmed) {
       return HttpResponse.json(
         { code: 'AXIS_TOPIC_NAME_BLANK', message: '주제 이름을 입력해주세요' },
         { status: 400 },
       );
     }
-    const duplicate = incoming.find((t) => axis.topics.some((existing) => existing.name === t.name));
-    if (duplicate) {
+    if (axis.topics.some((t) => t.name === trimmed)) {
       return HttpResponse.json(
-        { code: 'AXIS_TOPIC_DUPLICATE_NAME', message: `이미 존재하는 주제입니다: ${duplicate.name}` },
+        { code: 'AXIS_TOPIC_DUPLICATE_NAME', message: `이미 존재하는 주제입니다: ${trimmed}` },
         { status: 409 },
       );
     }
-    const added: MockTopic[] = incoming.map((t, i) => ({
+    const topic: MockTopic = {
       topicId: `topic-${state.nextTopicId++}`,
-      name: t.name,
-      description: t.description ?? null,
-      displayOrder: axis.topics.length + i + 1,
-      coverageStatus: 'NO_MATERIAL' as const,
-      isFocused: axis.topics.length + i < 3,
+      axisId,
+      name: trimmed,
+      description: body.description ?? null,
+      displayOrder: axis.topics.length + 1,
+      coverageStatus: 'NO_MATERIAL',
+      isFocused: axis.topics.length < 3,
       revisionCount: 0,
-    }));
-    axis.topics.push(...added);
+    };
+    axis.topics.push(topic);
     return HttpResponse.json(
       {
-        topics: added.map((t) => ({
-          topicId: t.topicId,
-          name: t.name,
-          description: t.description ?? undefined,
-          displayOrder: t.displayOrder,
-          coverageStatus: t.coverageStatus,
-          isFocused: t.isFocused,
-        })),
+        topicId: topic.topicId,
+        axisId,
+        name: topic.name,
+        description: topic.description,
+        displayOrder: topic.displayOrder,
+        coverageStatus: topic.coverageStatus,
+        isFocused: topic.isFocused,
         isTopicCountExceedsRecommended: axis.topics.length > 10,
       },
       { status: 201 },
     );
   }),
 
-  http.post('/api/learning-facade/axes/:axisId/topics/suggestions', async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as { limit?: number };
-    const limit = Math.min(Math.max(body.limit ?? 5, 1), 5);
-    return HttpResponse.json({
-      suggestions: TOPIC_SUGGESTIONS.slice(0, limit),
-      suggestionsAvailable: true,
-      provider_context: 'none',
-    });
-  }),
-
-  http.get('/api/learning-facade/revision-reasons', () => {
+  http.get('/api/v1/learning-facade/revision-reason-options', () => {
     return HttpResponse.json({ options: REVISION_REASONS });
   }),
 
-  http.patch('/api/learning-facade/topics/:topicId', async ({ params, request }) => {
-    const topicId = params.topicId as string;
-    const topic = findTopic(topicId);
-    if (!topic) {
-      return HttpResponse.json(
-        { code: 'TOPIC_NOT_FOUND', message: '주제를 찾을 수 없습니다' },
-        { status: 404 },
-      );
-    }
-    const body = (await request.json()) as {
-      name?: string;
-      description?: string | null;
-      revisionReasonId?: number | null;
-    };
-    const trimmedName = body.name?.trim();
-    const newName = trimmedName ?? topic.name;
-    const changed = newName !== topic.name;
-    if (changed) {
-      topic.name = newName;
-      topic.coverageStatus = 'NO_MATERIAL';
-      topic.revisionCount += 1;
-    }
-    if (body.description !== undefined) {
-      topic.description = body.description ?? null;
-    }
-    if (body.revisionReasonId != null) {
-      const exists = REVISION_REASONS.some((r) => r.id === body.revisionReasonId);
-      if (!exists) {
+  http.patch(
+    '/api/v1/learning-facade/axes/:axisId/topics/:topicId',
+    async ({ params, request }) => {
+      const axisId = params.axisId as string;
+      const topicId = params.topicId as string;
+      const axis = findAxis(axisId);
+      if (!axis) {
         return HttpResponse.json(
-          { code: 'REVISION_REASON_NOT_FOUND', message: '선택지를 찾을 수 없어요' },
+          { code: 'LF_AXIS_NOT_FOUND', message: '축을 찾을 수 없습니다' },
           { status: 404 },
         );
       }
-    }
-    return HttpResponse.json({
-      topicId: topic.topicId,
-      name: topic.name,
-      description: topic.description ?? null,
-      coverageStatus: topic.coverageStatus,
-      changed,
-      isRefinementSuggested: topic.revisionCount >= 3,
-      revisionCount: topic.revisionCount,
-    });
-  }),
+      const topic = findTopicInAxis(axis, topicId);
+      if (!topic) {
+        return HttpResponse.json(
+          { code: 'TOPIC_NOT_FOUND', message: '주제를 찾을 수 없습니다' },
+          { status: 404 },
+        );
+      }
+      const body = (await request.json()) as {
+        name?: string;
+        description?: string | null;
+        revisionReasonOptionId?: number | null;
+      };
+      const trimmedName = body.name?.trim();
+      const newName = trimmedName ?? topic.name;
+      const changed = newName !== topic.name;
+      if (changed) {
+        topic.name = newName;
+        topic.coverageStatus = 'NO_MATERIAL';
+        topic.revisionCount += 1;
+      }
+      if (body.description !== undefined) {
+        topic.description = body.description ?? null;
+      }
+      if (body.revisionReasonOptionId != null) {
+        const exists = REVISION_REASONS.some((r) => r.id === body.revisionReasonOptionId);
+        if (!exists) {
+          return HttpResponse.json(
+            { code: 'REVISION_REASON_NOT_FOUND', message: '선택지를 찾을 수 없어요' },
+            { status: 404 },
+          );
+        }
+      }
+      return HttpResponse.json({
+        topicId: topic.topicId,
+        name: topic.name,
+        description: topic.description,
+        coverageStatus: topic.coverageStatus,
+        changed,
+        isRefinementSuggested: topic.revisionCount >= 3,
+        revisionCount: topic.revisionCount,
+      });
+    },
+  ),
 
-  http.post('/api/learning-facade/materials', async ({ request }) => {
+  http.post('/api/v1/learning-facade/materials', async ({ request }) => {
     const body = (await request.json()) as {
       name?: string;
-      type?: 'BOOK' | 'COURSE' | 'AI_CONVERSATION' | 'WEB_RESOURCE';
-      topicIds?: string[];
+      materialType?: 'BOOK' | 'COURSE' | 'AI_CONVERSATION' | 'WEB_RESOURCE';
+      linkedTopicIds?: string[];
     };
     const name = body.name?.trim();
-    const type = body.type;
-    if (!name || !type) {
+    const materialType = body.materialType;
+    if (!name || !materialType) {
       return HttpResponse.json(
-        { code: 'MATERIAL_VALIDATION', message: '필수 필드를 입력해주세요' },
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
         { status: 400 },
       );
     }
     const materialId = `material-${state.nextMaterialId++}`;
     const deckId = `deck-${state.nextDeckId++}`;
-    const topicIds = body.topicIds ?? [];
-    topicIds.forEach((tid) => {
-      const t = findTopic(tid);
-      if (t && t.coverageStatus === 'NO_MATERIAL') t.coverageStatus = 'PARTIAL';
+    const linkedTopicIds = body.linkedTopicIds ?? [];
+    linkedTopicIds.forEach((tid) => {
+      for (const axis of state.axes) {
+        const t = findTopicInAxis(axis, tid);
+        if (t && t.coverageStatus === 'NO_MATERIAL') {
+          t.coverageStatus = 'PARTIAL';
+          break;
+        }
+      }
     });
     const material: MockMaterial = {
       materialId,
-      type,
+      materialType,
       name,
-      topicIds,
+      linkedTopicIds,
       proficiencyLevel: null,
       deckId,
     };
@@ -348,17 +364,20 @@ export const facadeHandlers = [
       {
         materialId,
         name,
-        type,
-        topicIds,
+        materialType,
+        linkedTopicIds,
         deckId,
         deckAutoCreated: true,
         proficiencyLevel: null,
-        updatedTopicsCoverage: topicIds
+        updatedTopicsCoverage: linkedTopicIds
           .map((tid) => {
-            const t = findTopic(tid);
-            return t ? { topicId: t.topicId, coverageStatus: t.coverageStatus } : null;
+            for (const axis of state.axes) {
+              const t = findTopicInAxis(axis, tid);
+              if (t) return { topicId: t.topicId, coverageStatus: t.coverageStatus };
+            }
+            return null;
           })
-          .filter(Boolean),
+          .filter((x): x is { topicId: string; coverageStatus: MockTopic['coverageStatus'] } => x !== null),
       },
       { status: 201 },
     );

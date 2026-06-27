@@ -1,7 +1,12 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeAll, afterAll, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { server } from '@/mocks/node';
+
+// MSW + zod + React Query roundtrip can exceed the 1000ms default under
+// parallel vitest workers; 10s keeps assertions deterministic without making
+// genuine failures take long to surface.
+configure({ asyncUtilTimeout: 10000 });
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {

@@ -42,3 +42,37 @@ export const SignupResponseSchema = z.object({
   userEntityId: z.coerce.number().int(),
 });
 export type SignupResponse = z.infer<typeof SignupResponseSchema>;
+
+// PUT /user — backend DTO UserUpdateRequestDTO (M1 Story 2 5-4):
+// username/password were removed; only nickname/email are editable for self.
+export const UserUpdateRequestSchema = z.object({
+  nickname: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+});
+export type UserUpdateRequest = z.infer<typeof UserUpdateRequestSchema>;
+
+export const UserUpdateResponseSchema = z.coerce.number().int();
+export type UserUpdateResponse = z.infer<typeof UserUpdateResponseSchema>;
+
+// Unified error envelope from GlobalExceptionHandler — every 4xx/5xx returns this.
+export const ErrorResponseSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  path: z.string(),
+  timestamp: z.string(),
+});
+export type ErrorResponseBody = z.infer<typeof ErrorResponseSchema>;
+
+// POST /social/login/{provider} — BE accepts {code, state?}; provider is kakao | naver.
+export const SocialProviderSchema = z.enum(['kakao', 'naver']);
+export type SocialProvider = z.infer<typeof SocialProviderSchema>;
+
+export const SocialLoginRequestSchema = z.object({
+  code: z.string().min(1),
+  state: z.string().optional(),
+});
+export type SocialLoginRequest = z.infer<typeof SocialLoginRequestSchema>;
+
+// Same TokenResponse shape as /login (refreshToken in body, AT in cookie).
+export const SocialLoginResponseSchema = LoginResponseSchema;
+export type SocialLoginResponse = LoginResponse;

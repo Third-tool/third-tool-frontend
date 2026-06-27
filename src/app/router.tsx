@@ -1,5 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { BootstrapGate } from '@/features/bootstrap/BootstrapGate';
+import { LandingPage } from '@/features/landing/LandingPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { MaintenancePage } from '@/features/error/MaintenancePage';
 import { StudyPage } from '@/features/cards/StudyPage';
@@ -7,6 +7,7 @@ import { ArchivePage } from '@/features/cards/ArchivePage';
 import { CardDetailPage } from '@/features/cards/CardDetailPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { SignupPage } from '@/features/auth/SignupPage';
+import { OAuthCallbackPage } from '@/features/auth/OAuthCallbackPage';
 import { OnboardingPage } from '@/features/onboarding/OnboardingPage';
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
 import { HomePage } from '@/features/home/HomePage';
@@ -17,9 +18,10 @@ import { TagsListPage } from '@/features/tags/TagsListPage';
 import { TagDetailPage } from '@/features/tags/TagDetailPage';
 
 export const router = createBrowserRouter([
-  { path: '/', element: <BootstrapGate /> },
+  { path: '/', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/signup', element: <SignupPage /> },
+  { path: '/oauth/:provider/callback', element: <OAuthCallbackPage /> },
   {
     path: '/onboarding',
     element: (

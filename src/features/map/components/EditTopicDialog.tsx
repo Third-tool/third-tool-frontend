@@ -10,12 +10,13 @@ import { useUpdateTopic } from '../hooks/useUpdateTopic';
 
 interface Props {
   open: boolean;
+  axisId: string;
   topicId: string;
   currentName: string;
   onClose: () => void;
 }
 
-export function EditTopicDialog({ open, topicId, currentName, onClose }: Props) {
+export function EditTopicDialog({ open, axisId, topicId, currentName, onClose }: Props) {
   const [name, setName] = useState(currentName);
   const [reasonId, setReasonId] = useState<number | null>(null);
   const [inline, setInline] = useState<string | null>(null);
@@ -47,10 +48,11 @@ export function EditTopicDialog({ open, topicId, currentName, onClose }: Props) 
     }
     update.mutate(
       {
+        axisId,
         topicId,
         payload: {
           name: name.trim(),
-          revisionReasonId: reasonId,
+          revisionReasonOptionId: reasonId,
         },
       },
       {

@@ -82,20 +82,20 @@ export function AddMaterialDialog({ open, axisName, topicId, topicName, onClose 
     create.mutate(
       {
         name: name.trim(),
-        type,
-        topicIds: [topicId],
+        materialType: type,
+        linkedTopicIds: [topicId],
         author: type === 'BOOK' ? author.trim() : undefined,
         platform: type === 'COURSE' ? platform.trim() : undefined,
         url: type === 'COURSE' || type === 'WEB_RESOURCE' ? url.trim() : undefined,
         aiProvider: type === 'AI_CONVERSATION' ? aiProvider.trim() : undefined,
-        source: type === 'WEB_RESOURCE' ? source.trim() : undefined,
-        note: type === 'AI_CONVERSATION' ? note.trim() : undefined,
+        webSource: type === 'WEB_RESOURCE' ? source.trim() : undefined,
+        memo: type === 'AI_CONVERSATION' ? note.trim() : undefined,
       },
       {
         onSuccess: (res) => setSuccess(res),
         onError: (err) => {
           const code = err instanceof ApiError ? err.code : 'UNKNOWN';
-          track('material_create_failed', { type, code });
+          track('material_create_failed', { materialType: type, code });
           if (err instanceof ApiError) {
             setInline(err.message);
           } else {
@@ -116,7 +116,7 @@ export function AddMaterialDialog({ open, axisName, topicId, topicName, onClose 
           <div className="flex flex-col gap-3">
             <h3 className="font-display text-2xl text-cream">Deck이 자동 생성되었어요</h3>
             <p className="text-cream-mute break-keep">
-              <span className="text-cream">{success.name}</span> Deck이 만들어졌어요. 연결된 주제 {success.topicIds.length}개의
+              <span className="text-cream">{success.name}</span> Deck이 만들어졌어요. 연결된 주제 {success.linkedTopicIds.length}개의
               커버리지가 갱신됐어요.
             </p>
           </div>

@@ -101,4 +101,54 @@ export const authHandlers = [
     state.authenticated = true;
     return HttpResponse.json({ userEntityId: 1234 }, { status: 201 });
   }),
+
+  http.post('/social/login/:provider', async ({ params, request }) => {
+    const provider = params.provider as string;
+    if (provider !== 'kakao' && provider !== 'naver') {
+      return HttpResponse.json(
+        { code: 'USER010', message: '지원하지 않는 소셜 제공자입니다.' },
+        { status: 400 },
+      );
+    }
+    const body = (await request.json().catch(() => ({}))) as { code?: string; state?: string };
+    if (!body.code) {
+      return HttpResponse.json(
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { status: 400 },
+      );
+    }
+    state.authenticated = true;
+    return HttpResponse.json(
+      { refreshToken: issueRefreshToken() },
+      { status: 200, headers: authCookieHeader() },
+    );
+  }),
+
+  http.put('/user', async ({ request }) => {
+    if (!state.authenticated) {
+      return HttpResponse.json(
+        { code: 'AUTH001', message: 'login required' },
+        { status: 401 },
+      );
+    }
+    const body = (await request.json().catch(() => ({}))) as {
+      username?: unknown;
+      password?: unknown;
+      nickname?: unknown;
+      email?: unknown;
+    };
+    if (body.username !== undefined || body.password !== undefined) {
+      return HttpResponse.json(
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { status: 400 },
+      );
+    }
+    if (typeof body.email === 'string' && body.email.length > 0 && !body.email.includes('@')) {
+      return HttpResponse.json(
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { status: 400 },
+      );
+    }
+    return HttpResponse.json(1, { status: 200 });
+  }),
 ];

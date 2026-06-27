@@ -50,7 +50,7 @@ describe('BootstrapGate', () => {
   it('redirects to /onboarding when authenticated user has no concept', async () => {
     server.use(
       http.get('/user', () => userOk()),
-      http.get('/api/learning-facade', () =>
+      http.get('/api/v1/learning-facade', () =>
         HttpResponse.json({
           facadeId: 'f',
           concept: null,
@@ -68,7 +68,7 @@ describe('BootstrapGate', () => {
   it('redirects to /home when authenticated user has a concept', async () => {
     server.use(
       http.get('/user', () => userOk()),
-      http.get('/api/learning-facade', () =>
+      http.get('/api/v1/learning-facade', () =>
         HttpResponse.json({
           facadeId: 'f',
           concept: '시스템 설계',
