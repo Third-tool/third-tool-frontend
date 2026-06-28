@@ -3,6 +3,8 @@ import { http, HttpResponse } from 'msw';
 interface AuthState {
   authenticated: boolean;
   rtSerial: number;
+  nickname: string;
+  email: string;
 }
 
 const DEMO_USERNAME = 'demo@third.tool';
@@ -11,11 +13,15 @@ const DEMO_PASSWORD = 'demo-pass';
 const state: AuthState = {
   authenticated: true,
   rtSerial: 0,
+  nickname: '도연',
+  email: DEMO_USERNAME,
 };
 
 export function resetAuthMockState(): void {
   state.authenticated = true;
   state.rtSerial = 0;
+  state.nickname = '도연';
+  state.email = DEMO_USERNAME;
 }
 
 function issueRefreshToken(): string {
@@ -55,8 +61,8 @@ export const authHandlers = [
     }
     return HttpResponse.json({
       username: DEMO_USERNAME,
-      nickname: '도연',
-      email: DEMO_USERNAME,
+      nickname: state.nickname,
+      email: state.email,
       social: false,
     });
   }),
@@ -145,9 +151,15 @@ export const authHandlers = [
     }
     if (typeof body.email === 'string' && body.email.length > 0 && !body.email.includes('@')) {
       return HttpResponse.json(
-        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { code: 'C001', message: '올바른 이메일 형식이 아니에요.' },
         { status: 400 },
       );
+    }
+    if (typeof body.nickname === 'string' && body.nickname.trim()) {
+      state.nickname = body.nickname.trim();
+    }
+    if (typeof body.email === 'string' && body.email.trim()) {
+      state.email = body.email.trim();
     }
     return HttpResponse.json(1, { status: 200 });
   }),

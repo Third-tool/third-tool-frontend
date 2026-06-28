@@ -6,6 +6,8 @@ import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser';
 import { useLearningFacade } from '@/features/auth/hooks/useLearningFacade';
 import { useArchive } from '@/features/cards/hooks/useArchive';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { ApiError } from '@/lib/api/client';
+import { useUpdateProfile } from './hooks/useUpdateProfile';
 
 type Plan = 'free' | 'pro';
 
@@ -36,10 +38,53 @@ export function MePage() {
   const facade = useLearningFacade();
   const archive = useArchive(null);
   const auth = useAuth();
+  const updateProfile = useUpdateProfile();
   const [plan, setPlan] = useState<Plan>('free');
+  const [isEditing, setIsEditing] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState('');
+  const [emailDraft, setEmailDraft] = useState('');
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const nickname = user.data?.nickname ?? '도연';
+  const email = user.data?.email ?? '';
   const initial = nickname.slice(0, 1);
+
+  const startEdit = () => {
+    setNicknameDraft(nickname);
+    setEmailDraft(email);
+    setProfileError(null);
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setProfileError(null);
+  };
+
+  const handleSave = () => {
+    setProfileError(null);
+    const payload: { nickname?: string; email?: string } = {};
+    if (nicknameDraft.trim() && nicknameDraft.trim() !== nickname) {
+      payload.nickname = nicknameDraft.trim();
+    }
+    if (emailDraft.trim() && emailDraft.trim() !== email) {
+      payload.email = emailDraft.trim();
+    }
+    if (Object.keys(payload).length === 0) {
+      setIsEditing(false);
+      return;
+    }
+    updateProfile.mutate(payload, {
+      onSuccess: () => setIsEditing(false),
+      onError: (err) => {
+        setProfileError(
+          err instanceof ApiError
+            ? err.message
+            : '저장에 실패했어요. 잠시 후 다시 시도해주세요.',
+        );
+      },
+    });
+  };
   const identity = facade.data?.concept ?? '결제·정산 도메인을 스스로 저술할 수 있는 백엔드 엔지니어';
   const archiveCount = archive.data?.length ?? 0;
   const masteredCount = Math.max(0, Math.floor(archiveCount / 2));
@@ -52,13 +97,35 @@ export function MePage() {
         <span className="opacity-50">/</span>
         <span className="font-medium text-cream-mute">프로필</span>
       </div>
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 rounded-full border border-edge-strong bg-transparent px-4 py-2.5 text-[13px] font-medium text-cream-mute transition-colors hover:bg-paper-2 hover:text-cream"
-      >
-        <Icon name="solar:pen-2-linear" width={15} height={15} />
-        프로필 수정
-      </button>
+      {isEditing ? (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={cancelEdit}
+            disabled={updateProfile.isPending}
+            className="inline-flex items-center gap-2 rounded-full border border-edge-strong bg-transparent px-4 py-2.5 text-[13px] font-medium text-cream-mute transition-colors hover:bg-paper-2 hover:text-cream disabled:opacity-50"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={updateProfile.isPending}
+            className="inline-flex items-center gap-2 rounded-full border-0 bg-amber px-4 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-amber-deep disabled:opacity-60"
+          >
+            {updateProfile.isPending ? '저장 중…' : '저장'}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={startEdit}
+          className="inline-flex items-center gap-2 rounded-full border border-edge-strong bg-transparent px-4 py-2.5 text-[13px] font-medium text-cream-mute transition-colors hover:bg-paper-2 hover:text-cream"
+        >
+          <Icon name="solar:pen-2-linear" width={15} height={15} />
+          프로필 수정
+        </button>
+      )}
     </>
   );
 
@@ -98,20 +165,50 @@ export function MePage() {
           {initial}
         </span>
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-3">
-            <h1 className="m-0 font-serif text-[38px] font-medium leading-none tracking-[-0.02em] text-cream">
-              {nickname}
-            </h1>
-            <span className="rounded-full bg-sage-soft px-2.5 py-1 text-[11.5px] font-semibold text-sage-ink">
-              연속 12일
-            </span>
-          </div>
-          <p className="m-0 mb-1.5 font-serif text-lg italic text-cream-mute break-keep">
-            "{identity}"
-          </p>
-          <span className="text-[12.5px] text-cream-faint">
-            주니어 백엔드 · 2025년 11월부터 곁에 앉는 중
-          </span>
+          {isEditing ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] uppercase tracking-[0.08em] text-cream-faint">닉네임</label>
+                <input
+                  value={nicknameDraft}
+                  onChange={(e) => setNicknameDraft(e.target.value)}
+                  className="rounded-[10px] border border-amber-line bg-surface px-3.5 py-2.5 font-serif text-[22px] font-medium text-cream caret-amber outline-none focus:shadow-[0_0_0_3px_var(--color-amber-soft)]"
+                  autoFocus
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] uppercase tracking-[0.08em] text-cream-faint">이메일</label>
+                <input
+                  type="email"
+                  value={emailDraft}
+                  onChange={(e) => setEmailDraft(e.target.value)}
+                  className="rounded-[10px] border border-edge-strong bg-surface px-3.5 py-2 text-[14px] text-cream caret-amber outline-none focus:border-amber-line focus:shadow-[0_0_0_3px_var(--color-amber-soft)]"
+                />
+              </div>
+              {profileError && (
+                <p role="alert" className="m-0 text-sm text-amber-deep">
+                  {profileError}
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 flex flex-wrap items-center gap-3">
+                <h1 className="m-0 font-serif text-[38px] font-medium leading-none tracking-[-0.02em] text-cream">
+                  {nickname}
+                </h1>
+                <span className="rounded-full bg-sage-soft px-2.5 py-1 text-[11.5px] font-semibold text-sage-ink">
+                  연속 12일
+                </span>
+              </div>
+              <p className="m-0 mb-1.5 font-serif text-lg italic text-cream-mute break-keep">
+                "{identity}"
+              </p>
+              <span className="text-[12.5px] text-cream-faint">
+                {email || '주니어 백엔드 · 2025년 11월부터 곁에 앉는 중'}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
