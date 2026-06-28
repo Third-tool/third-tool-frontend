@@ -115,6 +115,13 @@ export function OnboardingPage() {
       navigate('/map', { replace: true });
     },
     onError: (err) => {
+      if (err instanceof ApiError && err.code === 'LF002') {
+        void (async () => {
+          await qc.invalidateQueries({ queryKey: LEARNING_FACADE_KEY });
+          navigate('/map', { replace: true });
+        })();
+        return;
+      }
       const code = err instanceof ApiError ? err.code : 'UNKNOWN';
       track('onboarding_failed', { code });
       setInline(

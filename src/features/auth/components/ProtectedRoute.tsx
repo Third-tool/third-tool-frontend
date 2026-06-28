@@ -8,6 +8,7 @@ import { useLearningFacade } from '../hooks/useLearningFacade';
 interface Props {
   children: ReactNode;
   requireConcept?: boolean;
+  redirectIfConcept?: string;
 }
 
 // Backend ErrorCode short codes (Common/Exception/ErrorCode/ErrorCode.java).
@@ -22,7 +23,7 @@ const AUTH_FAIL_CODES = new Set([
   'AUTH104', // REFRESH_TOKEN_MISSING
 ]);
 
-export function ProtectedRoute({ children, requireConcept = false }: Props) {
+export function ProtectedRoute({ children, requireConcept = false, redirectIfConcept }: Props) {
   const location = useLocation();
   const user = useCurrentUser();
   const facade = useLearningFacade(user.isSuccess);
@@ -52,6 +53,13 @@ export function ProtectedRoute({ children, requireConcept = false }: Props) {
         requestId={user.error instanceof ApiError ? user.error.requestId : null}
       />
     );
+  }
+
+  if (redirectIfConcept) {
+    if (facade.isLoading || facade.isFetching) return <FullPageLoader />;
+    if (!facade.isError && facade.data?.concept) {
+      return <Navigate to={redirectIfConcept} replace />;
+    }
   }
 
   if (requireConcept) {
