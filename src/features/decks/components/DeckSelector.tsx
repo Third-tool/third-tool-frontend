@@ -59,11 +59,22 @@ export function DeckSelector() {
           onChange={(e) => setSelectedDeckId(e.target.value || null)}
           className="w-full rounded-[8px] border border-edge bg-surface px-2 py-1.5 text-[12.5px] text-cream outline-none focus:border-amber-line"
         >
-          {list.map((d) => (
-            <option key={d.deckId} value={d.deckId}>
-              {d.name} ({d.cardCount})
-            </option>
-          ))}
+          {list.map((d) => {
+            const prefix =
+              d.progressStatus === 'COMPLETED'
+                ? '✓ '
+                : d.progressStatus === 'IN_PROGRESS'
+                  ? '◉ '
+                  : d.progressStatus === 'NOT_STARTED'
+                    ? '○ '
+                    : '';
+            return (
+              <option key={d.deckId} value={d.deckId}>
+                {prefix}
+                {d.name} ({d.cardCount})
+              </option>
+            );
+          })}
         </select>
       )}
 

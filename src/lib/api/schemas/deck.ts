@@ -2,6 +2,16 @@ import { z } from 'zod';
 
 // Mirrors Deck/presentation/dto/DeckResponse.java records.
 
+// progressStatus is derived from card states (no ON_FIELD/ARCHIVE → NOT_STARTED,
+// at least one ON_FIELD → IN_PROGRESS, all ARCHIVE → COMPLETED). Optional so the
+// UI degrades gracefully if BE hasn't yet exposed the field.
+export const DeckProgressStatusSchema = z.enum([
+  'NOT_STARTED',
+  'IN_PROGRESS',
+  'COMPLETED',
+]);
+export type DeckProgressStatus = z.infer<typeof DeckProgressStatusSchema>;
+
 export const DeckSummarySchema = z.object({
   deckId: z.coerce.string(),
   name: z.string(),
@@ -10,6 +20,7 @@ export const DeckSummarySchema = z.object({
   lastAccessed: z.string().nullable().optional(),
   cardCount: z.number().int().nonnegative(),
   subDeckCount: z.number().int().nonnegative(),
+  progressStatus: DeckProgressStatusSchema.optional(),
 });
 export type DeckSummary = z.infer<typeof DeckSummarySchema>;
 
@@ -23,6 +34,7 @@ export const DeckDetailSchema = z.object({
   lastAccessed: z.string().nullable().optional(),
   cardCount: z.number().int().nonnegative(),
   subDeckCount: z.number().int().nonnegative(),
+  progressStatus: DeckProgressStatusSchema.optional(),
   createdDate: z.string().optional(),
   updatedDate: z.string().optional(),
 });

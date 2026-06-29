@@ -1,4 +1,14 @@
 import { http, HttpResponse } from 'msw';
+import { getCardMockState } from './card.handlers';
+
+type DeckProgress = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+
+function computeProgress(deckId: number): DeckProgress {
+  const cards = [...getCardMockState().cards.values()].filter((c) => c.deckId === deckId);
+  if (cards.length === 0) return 'NOT_STARTED';
+  if (cards.some((c) => c.status === 'ON_FIELD')) return 'IN_PROGRESS';
+  return 'COMPLETED';
+}
 
 interface MockDeck {
   deckId: number;
@@ -47,6 +57,7 @@ function toSummary(d: MockDeck) {
     lastAccessed: d.lastAccessed,
     cardCount: d.cardCount,
     subDeckCount: d.subDeckCount,
+    progressStatus: computeProgress(d.deckId),
   };
 }
 
@@ -61,6 +72,7 @@ function toDetail(d: MockDeck) {
     lastAccessed: d.lastAccessed,
     cardCount: d.cardCount,
     subDeckCount: d.subDeckCount,
+    progressStatus: computeProgress(d.deckId),
     createdDate: d.createdDate,
     updatedDate: d.updatedDate,
   };

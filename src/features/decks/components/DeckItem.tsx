@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { Icon } from '@/components/Icon';
-import type { DeckSummary } from '@/lib/api/schemas/deck';
+import type { DeckProgressStatus, DeckSummary } from '@/lib/api/schemas/deck';
 import { useSubDecks } from '../hooks/useSubDecks';
+
+const PROGRESS_META: Record<
+  DeckProgressStatus,
+  { label: string; bg: string; color: string }
+> = {
+  NOT_STARTED: { label: '시작 전', bg: 'bg-paper-2', color: 'text-cream-faint' },
+  IN_PROGRESS: { label: '학습 중', bg: 'bg-amber-soft', color: 'text-amber-deep' },
+  COMPLETED: { label: '완료', bg: 'bg-sage-soft', color: 'text-sage-ink' },
+};
 
 interface Props {
   deck: DeckSummary;
@@ -51,8 +60,19 @@ export function DeckItem({ deck, parentDeckId, depth, onRename, onAddSub, onMove
         />
 
         <div className="min-w-0 flex-1">
-          <div className="truncate font-serif text-[16px] font-medium text-cream">
-            {deck.name}
+          <div className="flex items-center gap-2">
+            <span className="truncate font-serif text-[16px] font-medium text-cream">
+              {deck.name}
+            </span>
+            {deck.progressStatus && (
+              <span
+                className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${
+                  PROGRESS_META[deck.progressStatus].bg
+                } ${PROGRESS_META[deck.progressStatus].color}`}
+              >
+                {PROGRESS_META[deck.progressStatus].label}
+              </span>
+            )}
           </div>
           <div className="mt-0.5 flex items-center gap-3 text-[11.5px] text-cream-faint">
             <span className="tabular-nums">카드 {deck.cardCount}</span>
