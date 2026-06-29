@@ -4,6 +4,7 @@ import { authHandlers } from './auth.handlers';
 import { tagHandlers } from './tag.handlers';
 import { deckHandlers } from './deck.handlers';
 import { reviewHandlers } from './review.handlers';
+import { scheduleHandlers } from './schedule.handlers';
 
 export const handlers = [
   ...authHandlers,
@@ -12,4 +13,5 @@ export const handlers = [
   ...tagHandlers,
   ...deckHandlers,
   ...reviewHandlers,
+  ...scheduleHandlers,
 ];

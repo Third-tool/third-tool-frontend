@@ -8,6 +8,7 @@ import { useArchive } from '@/features/cards/hooks/useArchive';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { ApiError } from '@/lib/api/client';
 import { useUpdateProfile } from './hooks/useUpdateProfile';
+import { ScheduleSection } from '@/features/schedule/components/ScheduleSection';
 
 type Plan = 'free' | 'pro';
 
@@ -444,6 +445,8 @@ export function MePage() {
           </div>
         </div>
       </div>
+
+      <ScheduleSection />
     </AppShell>
   );
 }
