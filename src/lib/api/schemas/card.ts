@@ -17,6 +17,14 @@ export const TagSchema = z.object({
 });
 export type TagOnCard = z.infer<typeof TagSchema>;
 
+// FE-facing keyword shape. Edit endpoints (POST/DELETE/PUT) need the id, so we
+// keep it on Card rather than flattening to string[].
+export const KeywordOnCardSchema = z.object({
+  id: z.coerce.string(),
+  value: z.string(),
+});
+export type KeywordOnCard = z.infer<typeof KeywordOnCardSchema>;
+
 export const CardSchema = z.object({
   cardId: z.coerce.string(),
   deckId: z.coerce.string().optional(),
@@ -24,7 +32,7 @@ export const CardSchema = z.object({
   enteredFieldAt: z.string(),
   viewCount: z.number().int().nonnegative(),
   summary: z.string(),
-  keywords: z.array(z.string()),
+  keywords: z.array(KeywordOnCardSchema),
   tags: z.array(TagSchema),
   lastViewedAt: z.string().nullable().optional(),
 });
@@ -119,7 +127,7 @@ export function adaptCardDetail(raw: RawCardDetail): Card {
     enteredFieldAt: raw.enteredFieldAt,
     viewCount: raw.viewCount,
     summary: raw.summary,
-    keywords: raw.keywords.map((k) => k.value),
+    keywords: raw.keywords.map((k) => ({ id: k.id, value: k.value })),
     tags: raw.tags.map((t) => ({ tagId: t.id, name: t.value })),
     lastViewedAt: raw.lastViewedAt ?? null,
   };
@@ -133,7 +141,7 @@ export function adaptCardSummary(raw: RawCardSummary, deckId?: string): Card {
     enteredFieldAt: raw.enteredFieldAt,
     viewCount: raw.viewCount,
     summary: raw.summary,
-    keywords: raw.keywords.map((k) => k.value),
+    keywords: raw.keywords.map((k) => ({ id: k.id, value: k.value })),
     tags: raw.tags.map((t) => ({ tagId: t.id, name: t.value })),
     lastViewedAt: raw.lastViewedAt ?? null,
   };
@@ -160,6 +168,39 @@ export function adaptCardTags(raw: CardTagsResponse): { cardId: string; tags: Ta
   return {
     cardId: raw.cardId,
     tags: raw.tags.map((t) => ({ tagId: t.id, name: t.value })),
+  };
+}
+
+// POST /api/v1/cards/{cardId}/keywords { value }
+export const AddKeywordRequestSchema = z.object({ value: z.string().min(1) });
+export type AddKeywordRequest = z.infer<typeof AddKeywordRequestSchema>;
+
+// PUT /api/v1/cards/{cardId}/keywords { keywords: [{ value }] }
+export const ReplaceKeywordsRequestSchema = z.object({
+  keywords: z.array(z.object({ value: z.string().min(1) })).min(1),
+});
+export type ReplaceKeywordsRequest = z.infer<typeof ReplaceKeywordsRequestSchema>;
+
+// Common response for POST/DELETE/PUT keyword endpoints.
+export const CardKeywordsResponseSchema = z.object({
+  cardId: z.coerce.string(),
+  keywords: z.array(
+    z.object({
+      id: z.coerce.string(),
+      value: z.string(),
+      displayOrder: z.number().int().nonnegative().optional(),
+    }),
+  ),
+});
+export type CardKeywordsResponse = z.infer<typeof CardKeywordsResponseSchema>;
+
+export function adaptCardKeywords(raw: CardKeywordsResponse): {
+  cardId: string;
+  keywords: KeywordOnCard[];
+} {
+  return {
+    cardId: raw.cardId,
+    keywords: raw.keywords.map((k) => ({ id: k.id, value: k.value })),
   };
 }
 

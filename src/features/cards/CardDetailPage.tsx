@@ -12,6 +12,8 @@ import { useReturnToField } from './hooks/useReturnToField';
 import { useArchiveCard } from './hooks/useArchiveCard';
 import { useAddCardTag } from './hooks/useAddCardTag';
 import { useRemoveCardTag } from './hooks/useRemoveCardTag';
+import { useAddCardKeyword } from './hooks/useAddCardKeyword';
+import { useRemoveCardKeyword } from './hooks/useRemoveCardKeyword';
 import { useUpdateCardSummary } from './hooks/useUpdateCardSummary';
 import { useDeleteCard } from './hooks/useDeleteCard';
 
@@ -32,11 +34,15 @@ export function CardDetailPage() {
   const archive = useArchiveCard();
   const addTag = useAddCardTag(cardId ?? '');
   const removeTag = useRemoveCardTag(cardId ?? '');
+  const addKeyword = useAddCardKeyword(cardId ?? '');
+  const removeKeyword = useRemoveCardKeyword(cardId ?? '');
   const updateSummary = useUpdateCardSummary(cardId ?? '');
   const deleteCardMut = useDeleteCard(cardId ?? '');
 
   const [tagDraft, setTagDraft] = useState('');
   const [tagError, setTagError] = useState<string | null>(null);
+  const [keywordDraft, setKeywordDraft] = useState('');
+  const [keywordError, setKeywordError] = useState<string | null>(null);
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -87,6 +93,57 @@ export function CardDetailPage() {
     removeTag.mutate(tagId, {
       onError: (err) => {
         const msg = err instanceof ApiError ? err.message : '태그 삭제에 실패했어요.';
+        toastStore.push({ message: msg, tone: 'amber' });
+      },
+    });
+  };
+
+  const submitKeyword = () => {
+    if (!card) return;
+    const value = keywordDraft.trim();
+    if (!value) return;
+    setKeywordError(null);
+    addKeyword.mutate(value, {
+      onSuccess: () => setKeywordDraft(''),
+      onError: (err) => {
+        if (err instanceof ApiError) {
+          if (err.code === 'CARD_KEYWORD_DUPLICATE') {
+            setKeywordError('이미 있는 키워드예요');
+            return;
+          }
+          if (err.code === 'CARD_KEYWORD_BLANK') {
+            setKeywordError('키워드를 입력해주세요');
+            return;
+          }
+          setKeywordError(err.message);
+          return;
+        }
+        setKeywordError('키워드 추가에 실패했어요.');
+      },
+    });
+  };
+
+  const onKeywordKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitKeyword();
+    }
+  };
+
+  const handleRemoveKeyword = (keywordId: string) => {
+    if (!card) return;
+    setKeywordError(null);
+    if (card.keywords.length <= 1) {
+      setKeywordError('마지막 키워드는 지울 수 없어요');
+      return;
+    }
+    removeKeyword.mutate(keywordId, {
+      onError: (err) => {
+        if (err instanceof ApiError && err.code === 'CARD033') {
+          setKeywordError('마지막 키워드는 지울 수 없어요');
+          return;
+        }
+        const msg = err instanceof ApiError ? err.message : '키워드 삭제에 실패했어요.';
         toastStore.push({ message: msg, tone: 'amber' });
       },
     });
@@ -275,16 +332,45 @@ export function CardDetailPage() {
                 <span className="mb-3.5 block text-[11px] uppercase tracking-[var(--tracking-eyebrow)] text-cream-faint">
                   Keywords
                 </span>
-                <div className="flex flex-wrap gap-2">
-                  {card.keywords.map((kw) => (
-                    <span
-                      key={kw}
-                      className="rounded-full bg-paper-2 px-3 py-1 text-xs text-cream-mute"
-                    >
-                      {kw}
-                    </span>
-                  ))}
+                <div className="flex flex-wrap items-center gap-2">
+                  {card.keywords.map((kw) => {
+                    const isLast = card.keywords.length <= 1;
+                    return (
+                      <span
+                        key={kw.id}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-paper-2 px-3 py-1 text-xs text-cream-mute"
+                      >
+                        {kw.value}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveKeyword(kw.id)}
+                          disabled={isLast || removeKeyword.isPending}
+                          aria-label={`${kw.value} 키워드 삭제`}
+                          title={isLast ? '마지막 키워드는 지울 수 없어요' : '삭제'}
+                          className="grid h-4 w-4 place-items-center rounded-full text-cream-faint transition-colors hover:bg-edge hover:text-cream disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-cream-faint"
+                        >
+                          <Icon name="solar:close-circle-linear" width={12} height={12} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                  <input
+                    value={keywordDraft}
+                    onChange={(e) => {
+                      setKeywordDraft(e.target.value);
+                      if (keywordError) setKeywordError(null);
+                    }}
+                    onKeyDown={onKeywordKey}
+                    disabled={addKeyword.isPending}
+                    placeholder="+ 키워드 추가 · Enter"
+                    className="min-w-[180px] rounded-full border border-dashed border-edge-strong bg-transparent px-3 py-1 text-xs text-cream caret-amber outline-none placeholder:text-cream-faint focus:border-amber-line"
+                  />
                 </div>
+                {keywordError && (
+                  <p role="alert" className="m-0 mt-2 text-xs text-amber-deep">
+                    {keywordError}
+                  </p>
+                )}
               </div>
 
               <div className="mt-7 border-t border-edge pt-7">

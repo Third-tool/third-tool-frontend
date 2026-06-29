@@ -8,12 +8,17 @@ import {
   CardTagsResponseSchema,
   UpdateSummaryRequestSchema,
   UpdateSummaryResponseSchema,
+  AddKeywordRequestSchema,
+  ReplaceKeywordsRequestSchema,
+  CardKeywordsResponseSchema,
   adaptCardDetail,
   adaptCardSummary,
   adaptCardTags,
+  adaptCardKeywords,
   type Card,
   type CreateCardRequest,
   type TagOnCard,
+  type KeywordOnCard,
   type UpdateSummaryResponse,
 } from '@/lib/api/schemas/card';
 import {
@@ -90,6 +95,42 @@ export async function updateCardSummary(
 
 export async function deleteCard(cardId: string): Promise<void> {
   await apiClient.delete(`/api/v1/cards/${cardId}`);
+}
+
+// K-1 POST /api/v1/cards/{cardId}/keywords { value }
+export async function addCardKeyword(
+  cardId: string,
+  value: string,
+): Promise<{ cardId: string; keywords: KeywordOnCard[] }> {
+  const validated = AddKeywordRequestSchema.parse({ value });
+  const { data } = await apiClient.post(`/api/v1/cards/${cardId}/keywords`, validated);
+  const raw = CardKeywordsResponseSchema.parse(data);
+  return adaptCardKeywords(raw);
+}
+
+// K-2 DELETE /api/v1/cards/{cardId}/keywords/{keywordCueId}
+export async function removeCardKeyword(
+  cardId: string,
+  keywordId: string,
+): Promise<{ cardId: string; keywords: KeywordOnCard[] }> {
+  const { data } = await apiClient.delete(
+    `/api/v1/cards/${cardId}/keywords/${keywordId}`,
+  );
+  const raw = CardKeywordsResponseSchema.parse(data);
+  return adaptCardKeywords(raw);
+}
+
+// K-3 PUT /api/v1/cards/{cardId}/keywords { keywords: [{value}] }
+export async function replaceCardKeywords(
+  cardId: string,
+  values: string[],
+): Promise<{ cardId: string; keywords: KeywordOnCard[] }> {
+  const validated = ReplaceKeywordsRequestSchema.parse({
+    keywords: values.map((value) => ({ value })),
+  });
+  const { data } = await apiClient.put(`/api/v1/cards/${cardId}/keywords`, validated);
+  const raw = CardKeywordsResponseSchema.parse(data);
+  return adaptCardKeywords(raw);
 }
 
 export async function createCard(payload: CreateCardRequest): Promise<Card> {

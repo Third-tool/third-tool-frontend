@@ -51,7 +51,7 @@ export function ArchivePage() {
         (c) =>
           c.summary.toLowerCase().includes(q) ||
           c.tags.some((t) => t.name.toLowerCase().includes(q)) ||
-          c.keywords.some((k) => k.toLowerCase().includes(q)),
+          c.keywords.some((k) => k.value.toLowerCase().includes(q)),
       );
     }
     list = list.filter((c) => !pending.has(c.cardId));

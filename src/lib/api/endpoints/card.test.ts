@@ -74,7 +74,7 @@ describe('archiveCard', () => {
     const r = await archiveCard('1');
     expect(mockPost).toHaveBeenCalledWith('/api/v1/cards/1/archive', { reason: 'MANUAL' });
     expect(r.status).toBe('ARCHIVE');
-    expect(r.keywords).toEqual(['k']);
+    expect(r.keywords).toEqual([{ id: '100', value: 'k' }]);
     expect(r.tags).toEqual([{ tagId: '200', name: 't' }]);
   });
 });

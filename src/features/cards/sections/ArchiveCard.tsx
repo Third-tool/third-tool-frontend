@@ -28,8 +28,8 @@ export function ArchiveCard({ card, expanded, onToggle }: Props) {
         <div className="mt-5 border-t border-edge pt-5">
           <div className="flex flex-wrap gap-2">
             {card.keywords.map((k) => (
-              <span key={k} className="rounded-full bg-glass px-3 py-1 text-xs text-cream-mute">
-                {k}
+              <span key={k.id} className="rounded-full bg-glass px-3 py-1 text-xs text-cream-mute">
+                {k.value}
               </span>
             ))}
           </div>

@@ -173,6 +173,129 @@ export const cardHandlers = [
     return HttpResponse.json(toDetail(c));
   }),
 
+  http.post('/api/v1/cards/:id/keywords', async ({ params, request }) => {
+    const id = Number(params.id);
+    const c = state.cards.get(id);
+    if (!c) {
+      return HttpResponse.json(
+        { code: 'CARD_NOT_FOUND', message: '카드를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json().catch(() => ({}))) as { value?: string };
+    const value = body.value?.trim();
+    if (!value) {
+      return HttpResponse.json(
+        { code: 'CARD_KEYWORD_BLANK', message: '키워드를 입력해주세요.' },
+        { status: 400 },
+      );
+    }
+    if (c.keywords.some((k) => k.value === value)) {
+      return HttpResponse.json(
+        { code: 'CARD_KEYWORD_DUPLICATE', message: '이미 있는 키워드예요.' },
+        { status: 409 },
+      );
+    }
+    const next = kw(state.nextId++, value);
+    const updated: MockCard = {
+      ...c,
+      keywords: [...c.keywords, next],
+      updatedDate: new Date().toISOString(),
+    };
+    state.cards.set(id, updated);
+    return HttpResponse.json(
+      {
+        cardId: updated.cardId,
+        keywords: updated.keywords.map((k, i) => ({
+          id: k.id,
+          value: k.value,
+          displayOrder: i + 1,
+        })),
+      },
+      { status: 201 },
+    );
+  }),
+
+  http.delete('/api/v1/cards/:id/keywords/:keywordId', ({ params }) => {
+    const id = Number(params.id);
+    const keywordId = Number(params.keywordId);
+    const c = state.cards.get(id);
+    if (!c) {
+      return HttpResponse.json(
+        { code: 'CARD_NOT_FOUND', message: '카드를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    if (c.keywords.length <= 1) {
+      return HttpResponse.json(
+        { code: 'CARD033', message: '마지막 키워드는 지울 수 없어요.' },
+        { status: 400 },
+      );
+    }
+    const updated: MockCard = {
+      ...c,
+      keywords: c.keywords.filter((k) => k.id !== keywordId),
+      updatedDate: new Date().toISOString(),
+    };
+    state.cards.set(id, updated);
+    return HttpResponse.json({
+      cardId: updated.cardId,
+      keywords: updated.keywords.map((k, i) => ({
+        id: k.id,
+        value: k.value,
+        displayOrder: i + 1,
+      })),
+    });
+  }),
+
+  http.put('/api/v1/cards/:id/keywords', async ({ params, request }) => {
+    const id = Number(params.id);
+    const c = state.cards.get(id);
+    if (!c) {
+      return HttpResponse.json(
+        { code: 'CARD_NOT_FOUND', message: '카드를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json().catch(() => ({}))) as {
+      keywords?: Array<{ value?: string }>;
+    };
+    const values = (body.keywords ?? [])
+      .map((k) => k.value?.trim() ?? '')
+      .filter((v) => v.length > 0);
+    if (values.length === 0) {
+      return HttpResponse.json(
+        { code: 'CARD_KEYWORD_BLANK', message: '키워드는 최소 1개 필요해요.' },
+        { status: 400 },
+      );
+    }
+    const seen = new Set<string>();
+    for (const v of values) {
+      if (seen.has(v)) {
+        return HttpResponse.json(
+          { code: 'CARD_KEYWORD_DUPLICATE', message: '중복된 키워드가 있어요.' },
+          { status: 409 },
+        );
+      }
+      seen.add(v);
+    }
+    const nextKeywords = values.map((value) => kw(state.nextId++, value));
+    const updated: MockCard = {
+      ...c,
+      keywords: nextKeywords,
+      updatedDate: new Date().toISOString(),
+    };
+    state.cards.set(id, updated);
+    return HttpResponse.json({
+      cardId: updated.cardId,
+      keywords: updated.keywords.map((k, i) => ({
+        id: k.id,
+        value: k.value,
+        displayOrder: i + 1,
+      })),
+    });
+  }),
+
   http.post('/api/v1/cards/:id/tags', async ({ params, request }) => {
     const id = Number(params.id);
     const c = state.cards.get(id);

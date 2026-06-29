@@ -26,10 +26,14 @@ describe('CardSchema', () => {
       enteredFieldAt: '2026-06-11T00:00:00Z',
       viewCount: 0,
       summary: '관계형 모델링 기초',
-      keywords: ['ER', 'normalization'],
+      keywords: [
+        { id: 'k1', value: 'ER' },
+        { id: 'k2', value: 'normalization' },
+      ],
       tags: [],
     });
     expect(c.viewCount).toBe(0);
+    expect(c.keywords[0]!.value).toBe('ER');
   });
 });
 
