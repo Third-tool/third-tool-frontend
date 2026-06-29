@@ -104,7 +104,12 @@ export function OnboardingPage() {
   };
 
   const save = useMutation({
-    mutationFn: async (payload: { statement: string; bridge: string; method: 'declare' | 'skip' }) => {
+    mutationFn: async (payload: {
+      statement: string;
+      bridge: string;
+      method: 'declare' | 'skip';
+      next: '/home' | '/map';
+    }) => {
       await createFacade(payload.statement);
       if (payload.bridge.trim()) await createAxis(payload.bridge.trim());
       return payload;
@@ -112,13 +117,15 @@ export function OnboardingPage() {
     onSuccess: async (payload) => {
       await qc.invalidateQueries({ queryKey: LEARNING_FACADE_KEY });
       track('onboarding_completed', { method: payload.method, conceptCount: concepts.length });
-      navigate('/map', { replace: true });
+      navigate(payload.next, { replace: true });
     },
     onError: (err) => {
       if (err instanceof ApiError && err.code === 'LF002') {
+        // LF002 means facade already exists — land on /home regardless of the
+        // requested target since the user likely just signed in/refreshed.
         void (async () => {
           await qc.invalidateQueries({ queryKey: LEARNING_FACADE_KEY });
-          navigate('/map', { replace: true });
+          navigate('/home', { replace: true });
         })();
         return;
       }
@@ -132,12 +139,13 @@ export function OnboardingPage() {
     },
   });
 
-  const submit = (method: 'declare' | 'skip') => {
+  const submit = (method: 'declare' | 'skip', next: '/home' | '/map' = '/home') => {
     setInline(null);
     save.mutate({
       statement: statementText.trim(),
       bridge: bridge || bridgeDraft.trim(),
       method,
+      next,
     });
   };
 
@@ -260,7 +268,8 @@ export function OnboardingPage() {
               bridge={bridge || bridgeDraft.trim() || '도메인 모델링'}
               inline={inline}
               pending={save.isPending}
-              onSubmit={() => submit('declare')}
+              onSubmit={() => submit('declare', '/home')}
+              onSubmitToMap={() => submit('declare', '/map')}
             />
           )}
 
@@ -735,6 +744,7 @@ function DeclareStep({
   inline,
   pending,
   onSubmit,
+  onSubmitToMap,
 }: {
   concepts: string[];
   statement: string;
@@ -745,6 +755,7 @@ function DeclareStep({
   inline: string | null;
   pending: boolean;
   onSubmit: () => void;
+  onSubmitToMap: () => void;
 }) {
   const finalConcepts = concepts.length > 0 ? concepts : ['나의 능력'];
   const isOverridden = statement !== assembled;
@@ -801,17 +812,25 @@ function DeclareStep({
         </p>
       )}
 
-      <div>
+      <div className="flex flex-col items-center gap-4">
         <button
           type="button"
           onClick={onSubmit}
           disabled={pending}
           className="group inline-flex items-center gap-3 rounded-full border-0 bg-amber py-4 pl-[30px] pr-[18px] text-[17px] font-medium text-white shadow-[0_10px_24px_-12px_rgba(196,103,63,0.65)] transition-all duration-[var(--dur-base)] ease-[var(--ease-spring)] hover:-translate-y-px hover:bg-amber-deep disabled:opacity-60"
         >
-          {pending ? '지도 펼치는 중…' : '이 조합으로, 지도 펼치기'}
+          {pending ? '준비 중…' : '이 조합으로 시작하기'}
           <span className="grid h-8 w-8 place-items-center rounded-full bg-white/20">
             <Icon name="solar:arrow-right-linear" width={17} height={17} />
           </span>
+        </button>
+        <button
+          type="button"
+          onClick={onSubmitToMap}
+          disabled={pending}
+          className="border-0 bg-transparent text-[12.5px] text-cream-faint transition-colors hover:text-cream-mute disabled:opacity-50"
+        >
+          지도부터 둘러볼래요 →
         </button>
       </div>
     </div>

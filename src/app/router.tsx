@@ -26,7 +26,7 @@ export const router = createBrowserRouter([
   {
     path: '/onboarding',
     element: (
-      <ProtectedRoute redirectIfConcept="/map">
+      <ProtectedRoute redirectIfConcept="/home">
         <OnboardingPage />
       </ProtectedRoute>
     ),

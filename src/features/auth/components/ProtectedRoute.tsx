@@ -63,7 +63,7 @@ export function ProtectedRoute({ children, requireConcept = false, redirectIfCon
   }
 
   if (requireConcept) {
-    if (facade.isLoading) return <FullPageLoader />;
+    if (facade.isLoading || facade.isFetching) return <FullPageLoader />;
     if (facade.isError) {
       if (facade.error instanceof ApiError && facade.error.code === 'MAINTENANCE') {
         return <Navigate to="/maintenance" replace />;
