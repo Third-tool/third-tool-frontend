@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { getCardMockState } from './card.handlers';
+import { clearPersistedScope, loadPersisted, savePersisted } from '../persistence';
 
 type DeckProgress = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
 
@@ -26,27 +27,61 @@ interface MockDeck {
 
 const now = '2026-06-01T08:00:00Z';
 
-const state: { decks: Map<number, MockDeck>; nextId: number } = {
-  decks: new Map([
-    [
-      1,
-      {
-        deckId: 1,
-        name: '기본 노트',
-        parentDeckId: null,
-        depth: 0,
-        onLibrary: false,
-        publishedAt: null,
-        lastAccessed: now,
-        cardCount: 5,
-        subDeckCount: 0,
-        createdDate: now,
-        updatedDate: now,
-      },
-    ],
-  ]),
-  nextId: 2,
-};
+interface DeckState {
+  decks: Map<number, MockDeck>;
+  nextId: number;
+}
+
+interface PersistedDeckState {
+  decks: Array<[number, MockDeck]>;
+  nextId: number;
+}
+
+function seedDecks(): DeckState {
+  return {
+    decks: new Map([
+      [
+        1,
+        {
+          deckId: 1,
+          name: '기본 노트',
+          parentDeckId: null,
+          depth: 0,
+          onLibrary: false,
+          publishedAt: null,
+          lastAccessed: now,
+          cardCount: 5,
+          subDeckCount: 0,
+          createdDate: now,
+          updatedDate: now,
+        },
+      ],
+    ]),
+    nextId: 2,
+  };
+}
+
+const state: DeckState = loadPersisted<DeckState>('deck', seedDecks(), (raw): DeckState => {
+  const obj = raw as PersistedDeckState;
+  return {
+    decks: new Map(obj.decks ?? []),
+    nextId: obj.nextId ?? 2,
+  };
+});
+
+function persist(): void {
+  savePersisted<DeckState>('deck', state, (s) => ({
+    decks: [...s.decks.entries()],
+    nextId: s.nextId,
+  }));
+}
+
+export function resetDeckMockState(): void {
+  const fresh = seedDecks();
+  state.decks = fresh.decks;
+  state.nextId = fresh.nextId;
+  clearPersistedScope('deck');
+}
 
 function toSummary(d: MockDeck) {
   return {
@@ -129,6 +164,7 @@ export const deckHandlers = [
     if (parent) {
       parent.subDeckCount += 1;
     }
+    persist();
     return HttpResponse.json(
       {
         deckId: created.deckId,
@@ -165,6 +201,7 @@ export const deckHandlers = [
     }
     d.name = body.name.trim();
     d.updatedDate = new Date().toISOString();
+    persist();
     return HttpResponse.json({ deckId: d.deckId, name: d.name });
   }),
 
@@ -213,6 +250,7 @@ export const deckHandlers = [
     d.depth = nextParent ? nextParent.depth + 1 : 0;
     if (nextParent) nextParent.subDeckCount += 1;
     d.updatedDate = new Date().toISOString();
+    persist();
     return HttpResponse.json({ deckId: d.deckId, parentDeckId: d.parentDeckId });
   }),
 
@@ -234,6 +272,7 @@ export const deckHandlers = [
       }
       state.decks.delete(current);
     }
+    persist();
     return new HttpResponse(null, { status: 204 });
   }),
 ];

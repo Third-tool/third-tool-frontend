@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { clearPersistedScope, loadPersisted, savePersisted } from '../persistence';
 
 interface AuthState {
   authenticated: boolean;
@@ -10,18 +11,24 @@ interface AuthState {
 const DEMO_USERNAME = 'demo@third.tool';
 const DEMO_PASSWORD = 'demo-pass';
 
-const state: AuthState = {
-  authenticated: true,
-  rtSerial: 0,
-  nickname: '도연',
-  email: DEMO_USERNAME,
-};
+function seedAuth(): AuthState {
+  return {
+    authenticated: true,
+    rtSerial: 0,
+    nickname: '도연',
+    email: DEMO_USERNAME,
+  };
+}
+
+const state: AuthState = loadPersisted<AuthState>('auth', seedAuth());
+
+function persist(): void {
+  savePersisted('auth', state);
+}
 
 export function resetAuthMockState(): void {
-  state.authenticated = true;
-  state.rtSerial = 0;
-  state.nickname = '도연';
-  state.email = DEMO_USERNAME;
+  Object.assign(state, seedAuth());
+  clearPersistedScope('auth');
 }
 
 function issueRefreshToken(): string {
@@ -49,6 +56,7 @@ export const authHandlers = [
       );
     }
     state.authenticated = true;
+    persist();
     return HttpResponse.json({ refreshToken: issueRefreshToken() }, { status: 200, headers: authCookieHeader() });
   }),
 
@@ -82,6 +90,7 @@ export const authHandlers = [
       );
     }
     state.authenticated = true;
+    persist();
     return HttpResponse.json({ refreshToken: issueRefreshToken() }, { status: 200, headers: authCookieHeader() });
   }),
 
@@ -105,6 +114,7 @@ export const authHandlers = [
       );
     }
     state.authenticated = true;
+    persist();
     return HttpResponse.json({ userEntityId: 1234 }, { status: 201 });
   }),
 
@@ -124,6 +134,7 @@ export const authHandlers = [
       );
     }
     state.authenticated = true;
+    persist();
     return HttpResponse.json(
       { refreshToken: issueRefreshToken() },
       { status: 200, headers: authCookieHeader() },
@@ -161,6 +172,7 @@ export const authHandlers = [
     if (typeof body.email === 'string' && body.email.trim()) {
       state.email = body.email.trim();
     }
+    persist();
     return HttpResponse.json(1, { status: 200 });
   }),
 ];

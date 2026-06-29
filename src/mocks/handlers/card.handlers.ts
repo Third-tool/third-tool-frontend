@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { getScheduleMockState } from './schedule.handlers';
+import { clearPersistedScope, loadPersisted, savePersisted } from '../persistence';
 
 const DEFAULT_DECK_ID = 1;
 const DEFAULT_DECK_NAME = '기본 노트';
@@ -85,12 +86,41 @@ function seed(): MockState {
   return { cards: map, nextId: 100 };
 }
 
-const state: MockState = seed();
+interface PersistedCardState {
+  cards: Array<[number, MockCard]>;
+  nextId: number;
+}
+
+const state: MockState = loadPersisted<MockState>(
+  'card',
+  seed(),
+  (raw): MockState => {
+    const obj = raw as PersistedCardState;
+    return {
+      cards: new Map(obj.cards ?? []),
+      nextId: obj.nextId ?? 100,
+    };
+  },
+);
+
+function persist(): void {
+  savePersisted<MockState>('card', state, (s) => ({
+    cards: [...s.cards.entries()],
+    nextId: s.nextId,
+  }));
+}
+
+// review.handlers mutates state.cards directly (viewCount bump on /next) — let
+// it persist through the same serializer instead of duplicating the shape.
+export function persistCardMockState(): void {
+  persist();
+}
 
 export function resetCardMockState(): void {
   const fresh = seed();
   state.cards = fresh.cards;
   state.nextId = fresh.nextId;
+  clearPersistedScope('card');
 }
 
 // Exposed so review.handlers can read/mutate cards (start session from ON_FIELD
@@ -219,6 +249,7 @@ export const cardHandlers = [
       updatedDate: new Date().toISOString(),
     };
     state.cards.set(id, updated);
+    persist();
     return HttpResponse.json(
       {
         cardId: updated.cardId,
@@ -254,6 +285,7 @@ export const cardHandlers = [
       updatedDate: new Date().toISOString(),
     };
     state.cards.set(id, updated);
+    persist();
     return HttpResponse.json({
       cardId: updated.cardId,
       keywords: updated.keywords.map((k, i) => ({
@@ -302,6 +334,7 @@ export const cardHandlers = [
       updatedDate: new Date().toISOString(),
     };
     state.cards.set(id, updated);
+    persist();
     return HttpResponse.json({
       cardId: updated.cardId,
       keywords: updated.keywords.map((k, i) => ({
@@ -348,6 +381,7 @@ export const cardHandlers = [
       updatedDate: new Date().toISOString(),
     };
     state.cards.set(id, updated);
+    persist();
     return HttpResponse.json({ cardId: updated.cardId, tags: updated.tags });
   }),
 
@@ -367,6 +401,7 @@ export const cardHandlers = [
       updatedDate: new Date().toISOString(),
     };
     state.cards.set(id, updated);
+    persist();
     return HttpResponse.json({ cardId: updated.cardId, tags: updated.tags });
   }),
 
@@ -389,6 +424,7 @@ export const cardHandlers = [
     }
     const updated: MockCard = { ...c, summary, updatedDate: new Date().toISOString() };
     state.cards.set(id, updated);
+    persist();
     return HttpResponse.json({ cardId: updated.cardId, summary: updated.summary });
   }),
 
@@ -401,6 +437,7 @@ export const cardHandlers = [
       );
     }
     state.cards.delete(id);
+    persist();
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -410,6 +447,7 @@ export const cardHandlers = [
     if (!c) return HttpResponse.json({ code: 'CARD001', message: '카드를 찾을 수 없습니다.' }, { status: 404 });
     const updated: MockCard = { ...c, status: 'ARCHIVE', updatedDate: new Date().toISOString() };
     state.cards.set(id, updated);
+    persist();
     return HttpResponse.json(toDetail(updated));
   }),
 
@@ -425,6 +463,7 @@ export const cardHandlers = [
       updatedDate: new Date().toISOString(),
     };
     state.cards.set(id, updated);
+    persist();
     return HttpResponse.json(toDetail(updated));
   }),
 
@@ -463,6 +502,7 @@ export const cardHandlers = [
       updatedDate: now,
     };
     state.cards.set(id, card);
+    persist();
     return HttpResponse.json(toDetail(card), { status: 201 });
   }),
 ];

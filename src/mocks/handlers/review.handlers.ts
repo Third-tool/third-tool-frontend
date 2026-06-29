@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
-import { getCardMockState, type MockCard } from './card.handlers';
+import { getCardMockState, persistCardMockState, type MockCard } from './card.handlers';
 import { getScheduleMockState } from './schedule.handlers';
+import { clearPersistedScope, loadPersisted, savePersisted } from '../persistence';
 
 const DEFAULT_DECK_NAME = '기본 노트';
 const FALLBACK_MAX_VIEW = 5;
@@ -18,12 +19,46 @@ interface MockSession {
   comparingStartedAt: string | null;
 }
 
-const sessions = new Map<string, MockSession>();
-let nextSessionId = 1;
+interface ReviewState {
+  sessions: Map<string, MockSession>;
+  nextSessionId: number;
+}
+
+interface PersistedReviewState {
+  sessions: Array<[string, MockSession]>;
+  nextSessionId: number;
+}
+
+function seedReview(): ReviewState {
+  return { sessions: new Map(), nextSessionId: 1 };
+}
+
+const reviewState: ReviewState = loadPersisted<ReviewState>(
+  'review',
+  seedReview(),
+  (raw): ReviewState => {
+    const obj = raw as PersistedReviewState;
+    return {
+      sessions: new Map(obj.sessions ?? []),
+      nextSessionId: obj.nextSessionId ?? 1,
+    };
+  },
+);
+
+// Local aliases keep existing handler code readable.
+const sessions = reviewState.sessions;
+
+function persist(): void {
+  savePersisted<ReviewState>('review', reviewState, (s) => ({
+    sessions: [...s.sessions.entries()],
+    nextSessionId: s.nextSessionId,
+  }));
+}
 
 export function resetReviewMockState(): void {
-  sessions.clear();
-  nextSessionId = 1;
+  reviewState.sessions.clear();
+  reviewState.nextSessionId = 1;
+  clearPersistedScope('review');
 }
 
 function buildCard(session: MockSession, card: MockCard) {
@@ -114,7 +149,7 @@ export const reviewHandlers = [
     }
 
     const ordered = roundRobinByDeck(cards);
-    const sessionId = `session-${nextSessionId++}`;
+    const sessionId = `session-${reviewState.nextSessionId++}`;
     const session: MockSession = {
       sessionId,
       deckId: deckIdForSession,
@@ -124,6 +159,7 @@ export const reviewHandlers = [
       comparingStartedAt: null,
     };
     sessions.set(sessionId, session);
+    persist();
     return HttpResponse.json(snapshot(session), { status: 201 });
   }),
 
@@ -156,6 +192,7 @@ export const reviewHandlers = [
     }
     session.reviewStep = 'COMPARING';
     session.comparingStartedAt = new Date().toISOString();
+    persist();
     return HttpResponse.json(buildCard(session, card));
   }),
 
@@ -184,11 +221,13 @@ export const reviewHandlers = [
           updatedDate: now,
         };
         cardState.cards.set(leavingId, updated);
+        persistCardMockState();
       }
     }
     session.currentIndex += 1;
     session.reviewStep = 'RECALLING';
     session.comparingStartedAt = null;
+    persist();
     const snap = snapshot(session);
     return HttpResponse.json({
       sessionId: snap.sessionId,

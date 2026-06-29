@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { clearPersistedScope, loadPersisted, savePersisted } from '../persistence';
 
 type Mode = 'MODE_10D' | 'MODE_20D' | 'MODE_30D';
 
@@ -65,7 +66,11 @@ function initialState(): ScheduleState {
   };
 }
 
-const state: ScheduleState = initialState();
+const state: ScheduleState = loadPersisted<ScheduleState>('schedule', initialState());
+
+function persist(): void {
+  savePersisted('schedule', state);
+}
 
 // Exposed so review/card handlers can read maxView and softScheduleIntervals
 // without re-implementing the BE mode-mapping rules.
@@ -74,8 +79,8 @@ export function getScheduleMockState(): ScheduleState {
 }
 
 export function resetScheduleMockState(): void {
-  const fresh = initialState();
-  Object.assign(state, fresh);
+  Object.assign(state, initialState());
+  clearPersistedScope('schedule');
 }
 
 function envelope(extra: { mappingGuide?: object } = {}) {
@@ -120,6 +125,7 @@ export const scheduleHandlers = [
         changedAt: state.updatedAt,
       });
     }
+    persist();
     return HttpResponse.json(
       envelope({
         mappingGuide: {
@@ -142,6 +148,7 @@ export const scheduleHandlers = [
     }
     state.schedule = { ...state.schedule, dailyTarget };
     state.updatedAt = new Date().toISOString();
+    persist();
     return HttpResponse.json(
       envelope({
         mappingGuide: {

@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { clearPersistedScope, loadPersisted, savePersisted } from '../persistence';
 
 interface MockTopic {
   topicId: string;
@@ -53,10 +54,15 @@ function seed(): FacadeState {
   };
 }
 
-const state: FacadeState = seed();
+const state: FacadeState = loadPersisted<FacadeState>('facade', seed());
+
+function persist(): void {
+  savePersisted('facade', state);
+}
 
 export function resetFacadeMockState(): void {
   Object.assign(state, seed());
+  clearPersistedScope('facade');
 }
 
 const REVISION_REASONS = [
@@ -145,6 +151,7 @@ export const facadeHandlers = [
     }
     state.exists = true;
     state.concept = trimmed;
+    persist();
     return HttpResponse.json(
       {
         facadeId: state.facadeId,
@@ -172,6 +179,7 @@ export const facadeHandlers = [
     }
     const changed = state.concept !== trimmed;
     state.concept = trimmed;
+    persist();
     return HttpResponse.json({
       facadeId: state.facadeId,
       concept: trimmed,
@@ -206,6 +214,7 @@ export const facadeHandlers = [
       topics: [],
     };
     state.axes.push(axis);
+    persist();
     return HttpResponse.json(
       {
         axisId,
@@ -252,6 +261,7 @@ export const facadeHandlers = [
       revisionCount: 0,
     };
     axis.topics.push(topic);
+    persist();
     return HttpResponse.json(
       {
         topicId: topic.topicId,
@@ -315,6 +325,7 @@ export const facadeHandlers = [
           );
         }
       }
+      persist();
       return HttpResponse.json({
         topicId: topic.topicId,
         name: topic.name,
@@ -351,6 +362,7 @@ export const facadeHandlers = [
       );
     }
     axis.name = trimmed;
+    persist();
     return HttpResponse.json({
       axisId: axis.axisId,
       name: axis.name,
@@ -379,6 +391,7 @@ export const facadeHandlers = [
       if (a) a.displayOrder = idx + 1;
     });
     state.axes.sort((a, b) => a.displayOrder - b.displayOrder);
+    persist();
     return HttpResponse.json({
       axes: state.axes.map((a) => ({
         axisId: a.axisId,
@@ -406,6 +419,7 @@ export const facadeHandlers = [
     state.axes.forEach((a, i) => {
       a.displayOrder = i + 1;
     });
+    persist();
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -436,6 +450,7 @@ export const facadeHandlers = [
         ...m,
         linkedTopicIds: m.linkedTopicIds.filter((tid) => tid !== topicId),
       }));
+      persist();
       return new HttpResponse(null, { status: 204 });
     },
   ),
@@ -475,6 +490,7 @@ export const facadeHandlers = [
       deckId,
     };
     state.materials.push(material);
+    persist();
     return HttpResponse.json(
       {
         materialId,
