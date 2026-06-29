@@ -13,6 +13,10 @@ import {
   RevisionReasonsResponseSchema,
   UpdateTopicRequestSchema,
   UpdateTopicResponseSchema,
+  RenameAxisRequestSchema,
+  RenameAxisResponseSchema,
+  ReorderAxesRequestSchema,
+  ReorderAxesResponseSchema,
   type LearningFacade,
   type CreateFacadeResponse,
   type UpdateConceptResponse,
@@ -24,6 +28,8 @@ import {
   type RevisionReasonsResponse,
   type UpdateTopicRequest,
   type UpdateTopicResponse,
+  type RenameAxisResponse,
+  type ReorderAxesResponse,
 } from '@/lib/api/schemas/facade';
 
 export async function getLearningFacade(): Promise<LearningFacade> {
@@ -88,4 +94,27 @@ export async function updateTopic(
     validated,
   );
   return UpdateTopicResponseSchema.parse(data);
+}
+
+export async function renameAxis(axisId: string, name: string): Promise<RenameAxisResponse> {
+  const validated = RenameAxisRequestSchema.parse({ name });
+  const { data } = await apiClient.patch(
+    `/api/v1/learning-facade/axes/${axisId}`,
+    validated,
+  );
+  return RenameAxisResponseSchema.parse(data);
+}
+
+export async function reorderAxes(orderedAxisIds: string[]): Promise<ReorderAxesResponse> {
+  const validated = ReorderAxesRequestSchema.parse({ orderedAxisIds });
+  const { data } = await apiClient.put('/api/v1/learning-facade/axes/order', validated);
+  return ReorderAxesResponseSchema.parse(data);
+}
+
+export async function deleteAxis(axisId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/learning-facade/axes/${axisId}`);
+}
+
+export async function deleteTopic(axisId: string, topicId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/learning-facade/axes/${axisId}/topics/${topicId}`);
 }

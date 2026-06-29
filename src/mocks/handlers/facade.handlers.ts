@@ -121,8 +121,10 @@ export const facadeHandlers = [
           coverageStatus: t.coverageStatus,
           isFocused: t.isFocused,
         })),
+        isTopicCountExceedsRecommended: a.topics.length > 10,
       })),
       coverageSummary: computeCoverage(),
+      isAxisCountExceedsRecommended: state.axes.length > 5,
     });
   }),
 
@@ -322,6 +324,119 @@ export const facadeHandlers = [
         isRefinementSuggested: topic.revisionCount >= 3,
         revisionCount: topic.revisionCount,
       });
+    },
+  ),
+
+  http.patch('/api/v1/learning-facade/axes/:axisId', async ({ params, request }) => {
+    const axisId = params.axisId as string;
+    const axis = findAxis(axisId);
+    if (!axis) {
+      return HttpResponse.json(
+        { code: 'LF_AXIS_NOT_FOUND', message: '축을 찾을 수 없습니다' },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json().catch(() => ({}))) as { name?: string };
+    const trimmed = body.name?.trim();
+    if (!trimmed) {
+      return HttpResponse.json(
+        { code: 'LEARNING_AXIS_NAME_BLANK', message: '축 이름을 입력해주세요' },
+        { status: 400 },
+      );
+    }
+    if (state.axes.some((a) => a.axisId !== axisId && a.name === trimmed)) {
+      return HttpResponse.json(
+        { code: 'LEARNING_AXIS_DUPLICATE_NAME', message: '이미 같은 이름의 축이 있습니다' },
+        { status: 409 },
+      );
+    }
+    axis.name = trimmed;
+    return HttpResponse.json({
+      axisId: axis.axisId,
+      name: axis.name,
+      displayOrder: axis.displayOrder,
+    });
+  }),
+
+  http.put('/api/v1/learning-facade/axes/order', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { orderedAxisIds?: Array<string | number> };
+    const ids = (body.orderedAxisIds ?? []).map((v) => String(v));
+    if (ids.length === 0) {
+      return HttpResponse.json(
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { status: 400 },
+      );
+    }
+    const known = new Set(state.axes.map((a) => a.axisId));
+    if (ids.length !== state.axes.length || ids.some((id) => !known.has(id))) {
+      return HttpResponse.json(
+        { code: 'LEARNING_AXIS_ORDER_MISMATCH', message: '축 순서 입력이 현재 축과 일치하지 않습니다' },
+        { status: 400 },
+      );
+    }
+    ids.forEach((axisId, idx) => {
+      const a = findAxis(axisId);
+      if (a) a.displayOrder = idx + 1;
+    });
+    state.axes.sort((a, b) => a.displayOrder - b.displayOrder);
+    return HttpResponse.json({
+      axes: state.axes.map((a) => ({
+        axisId: a.axisId,
+        name: a.name,
+        displayOrder: a.displayOrder,
+      })),
+    });
+  }),
+
+  http.delete('/api/v1/learning-facade/axes/:axisId', ({ params }) => {
+    const axisId = params.axisId as string;
+    const idx = state.axes.findIndex((a) => a.axisId === axisId);
+    if (idx === -1) {
+      return HttpResponse.json(
+        { code: 'LF_AXIS_NOT_FOUND', message: '축을 찾을 수 없습니다' },
+        { status: 404 },
+      );
+    }
+    const removed = state.axes.splice(idx, 1)[0]!;
+    const removedTopicIds = new Set(removed.topics.map((t) => t.topicId));
+    state.materials = state.materials.map((m) => ({
+      ...m,
+      linkedTopicIds: m.linkedTopicIds.filter((tid) => !removedTopicIds.has(tid)),
+    }));
+    state.axes.forEach((a, i) => {
+      a.displayOrder = i + 1;
+    });
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete(
+    '/api/v1/learning-facade/axes/:axisId/topics/:topicId',
+    ({ params }) => {
+      const axisId = params.axisId as string;
+      const topicId = params.topicId as string;
+      const axis = findAxis(axisId);
+      if (!axis) {
+        return HttpResponse.json(
+          { code: 'LF_AXIS_NOT_FOUND', message: '축을 찾을 수 없습니다' },
+          { status: 404 },
+        );
+      }
+      const idx = axis.topics.findIndex((t) => t.topicId === topicId);
+      if (idx === -1) {
+        return HttpResponse.json(
+          { code: 'TOPIC_NOT_FOUND', message: '주제를 찾을 수 없습니다' },
+          { status: 404 },
+        );
+      }
+      axis.topics.splice(idx, 1);
+      axis.topics.forEach((t, i) => {
+        t.displayOrder = i + 1;
+      });
+      state.materials = state.materials.map((m) => ({
+        ...m,
+        linkedTopicIds: m.linkedTopicIds.filter((tid) => tid !== topicId),
+      }));
+      return new HttpResponse(null, { status: 204 });
     },
   ),
 

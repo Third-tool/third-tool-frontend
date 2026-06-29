@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { AppShell } from '@/components/AppShell';
+import { Dialog } from '@/components/Dialog';
 import { Icon } from '@/components/Icon';
 import { useLearningFacade } from '@/features/auth/hooks/useLearningFacade';
 import { track as trackEvent } from '@/lib/analytics/track';
+import { ApiError } from '@/lib/api/client';
+import { toastStore } from '@/lib/toast/toastQueue';
 import type { CoverageStatus } from '@/lib/api/schemas/facade';
+import { useRenameAxis } from './hooks/useRenameAxis';
+import { useReorderAxes } from './hooks/useReorderAxes';
+import { useDeleteAxis } from './hooks/useDeleteAxis';
+import { useDeleteTopic } from './hooks/useDeleteTopic';
 
 type NodeStatus = 'none' | 'partial' | 'covered';
 
@@ -50,10 +57,23 @@ interface Change {
 type Lens = 'struct' | 'shape' | 'hist';
 
 const STATUS_META: Record<NodeStatus, { label: string; dot: string; bg: string; color: string }> = {
-  covered: { label: '강함', dot: 'var(--color-sage)', bg: 'bg-sage-soft', color: 'text-sage-ink' },
-  partial: { label: '진행', dot: 'var(--color-amber)', bg: 'bg-amber-soft', color: 'text-amber-deep' },
-  none: { label: '미착수', dot: 'var(--color-edge-strong)', bg: 'bg-paper-2', color: 'text-cream-faint' },
+  covered: { label: '완료', dot: 'var(--color-sage)', bg: 'bg-sage-soft', color: 'text-sage-ink' },
+  partial: { label: '학습 중', dot: 'var(--color-amber)', bg: 'bg-amber-soft', color: 'text-amber-deep' },
+  none: { label: '자료 없음', dot: 'var(--color-edge-strong)', bg: 'bg-paper-2', color: 'text-cream-faint' },
 };
+
+// Track ids are encoded as `t-${axisId}` for persisted axes and `t-x-${n}` for
+// locally-added (not-yet-saved) tracks. Same scheme for nodes: `n-${topicId}` vs `nx-${n}`.
+function extractAxisId(trackId: string): string | null {
+  if (!trackId.startsWith('t-')) return null;
+  const rest = trackId.slice(2);
+  if (rest.startsWith('x-')) return null;
+  return rest;
+}
+function extractTopicId(nodeId: string): string | null {
+  if (!nodeId.startsWith('n-')) return null;
+  return nodeId.slice(2);
+}
 
 const STATUS_ORDER: NodeStatus[] = ['none', 'partial', 'covered'];
 
@@ -82,6 +102,10 @@ function nowLabel(): string {
 
 export function MapPage() {
   const facade = useLearningFacade();
+  const renameAxisMut = useRenameAxis();
+  const reorderAxesMut = useReorderAxes();
+  const deleteAxisMut = useDeleteAxis();
+  const deleteTopicMut = useDeleteTopic();
 
   const [identity, setIdentity] = useState('결제·정산 도메인을 스스로 저술할 수 있는 백엔드 엔지니어');
   const [lens, setLens] = useState<Lens>('struct');
@@ -93,6 +117,8 @@ export function MapPage() {
   const [edit, setEdit] = useState<EditKind | null>(null);
   const [draft, setDraft] = useState('');
   const [changes, setChanges] = useState<Change[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<{ tid: string; name: string } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const nidRef = useRef(100);
   const seededRef = useRef(false);
 
@@ -153,9 +179,34 @@ export function MapPage() {
     }
     if (edit.kind === 'trackName' && v) {
       const tid = edit.tid;
+      const original = tracks.find((t) => t.id === tid)?.name ?? '';
+      if (v === original) {
+        cancelEdit();
+        return;
+      }
       setTracks((s) => s.map((t) => (t.id === tid ? { ...t, name: v } : t)));
-      log(`축 이름 변경 → ${v}`, '✎', 'edit');
       cancelEdit();
+      const axisId = extractAxisId(tid);
+      if (!axisId) {
+        log(`축 이름 변경 → ${v}`, '✎', 'edit');
+        return;
+      }
+      renameAxisMut.mutate(
+        { axisId, name: v },
+        {
+          onSuccess: () => log(`축 이름 변경 → ${v}`, '✎', 'edit'),
+          onError: (err) => {
+            setTracks((s) => s.map((t) => (t.id === tid ? { ...t, name: original } : t)));
+            const msg =
+              err instanceof ApiError && err.code === 'LEARNING_AXIS_DUPLICATE_NAME'
+                ? '이미 있는 축 이름이에요'
+                : err instanceof ApiError
+                  ? err.message
+                  : '이름 변경에 실패했어요.';
+            toastStore.push({ message: msg, tone: 'amber' });
+          },
+        },
+      );
       return;
     }
     if (edit.kind === 'nodeName' && v) {
@@ -235,33 +286,105 @@ export function MapPage() {
   };
 
   const deleteNode = (tid: string, nid: string) => {
-    let name = '';
+    const track = tracks.find((t) => t.id === tid);
+    const node = track?.nodes.find((n) => n.id === nid);
+    if (!track || !node) return;
+    const name = node.name;
     setTracks((s) =>
-      s.map((t) => {
-        if (t.id !== tid) return t;
-        return {
-          ...t,
-          nodes: t.nodes.filter((n) => {
-            if (n.id === nid) name = n.name;
-            return n.id !== nid;
-          }),
-        };
-      }),
+      s.map((t) => (t.id !== tid ? t : { ...t, nodes: t.nodes.filter((n) => n.id !== nid) })),
     );
-    setTimeout(() => log(`노드 삭제 — ${name}`, '−', 'del'), 0);
+    log(`노드 삭제 — ${name}`, '−', 'del');
+    const axisId = extractAxisId(tid);
+    const topicId = extractTopicId(nid);
+    if (!axisId || !topicId) return;
+    deleteTopicMut.mutate(
+      { axisId, topicId },
+      {
+        onError: (err) => {
+          setTracks((s) =>
+            s.map((t) =>
+              t.id === tid
+                ? { ...t, nodes: [...t.nodes, node].sort((a, b) => (a.id < b.id ? -1 : 1)) }
+                : t,
+            ),
+          );
+          const msg = err instanceof ApiError ? err.message : '주제 삭제에 실패했어요.';
+          toastStore.push({ message: msg, tone: 'amber' });
+        },
+      },
+    );
   };
 
-  const deleteTrack = (id: string) => {
-    let name = '';
-    setTracks((s) =>
-      s.filter((t) => {
-        if (t.id === id) name = t.name;
-        return t.id !== id;
-      }),
-    );
-    setGroups((s) => s.map((g) => ({ ...g, trackIds: g.trackIds.filter((x) => x !== id) })));
-    cancelEdit();
-    setTimeout(() => log(`축 삭제 (리팩토링) — ${name}`, '−', 'del'), 0);
+  const requestDeleteTrack = (id: string) => {
+    const name = tracks.find((t) => t.id === id)?.name ?? '';
+    setDeleteError(null);
+    setConfirmDelete({ tid: id, name });
+  };
+
+  const performDeleteTrack = () => {
+    if (!confirmDelete) return;
+    const id = confirmDelete.tid;
+    const name = confirmDelete.name;
+    const axisId = extractAxisId(id);
+    if (!axisId) {
+      // not persisted yet — just remove locally
+      setTracks((s) => s.filter((t) => t.id !== id));
+      setGroups((s) => s.map((g) => ({ ...g, trackIds: g.trackIds.filter((x) => x !== id) })));
+      log(`축 삭제 — ${name}`, '−', 'del');
+      setConfirmDelete(null);
+      cancelEdit();
+      return;
+    }
+    setDeleteError(null);
+    deleteAxisMut.mutate(axisId, {
+      onSuccess: () => {
+        setTracks((s) => s.filter((t) => t.id !== id));
+        setGroups((s) => s.map((g) => ({ ...g, trackIds: g.trackIds.filter((x) => x !== id) })));
+        log(`축 삭제 — ${name}`, '−', 'del');
+        setConfirmDelete(null);
+        cancelEdit();
+      },
+      onError: (err) => {
+        const msg = err instanceof ApiError ? err.message : '축 삭제에 실패했어요.';
+        setDeleteError(msg);
+      },
+    });
+  };
+
+  const moveTrack = (gid: string, tid: string, dir: -1 | 1) => {
+    const g = groups.find((gr) => gr.id === gid);
+    if (!g) return;
+    const idx = g.trackIds.indexOf(tid);
+    const newIdx = idx + dir;
+    if (idx === -1 || newIdx < 0 || newIdx >= g.trackIds.length) return;
+    const newTrackIds = [...g.trackIds];
+    const a = newTrackIds[idx]!;
+    const b = newTrackIds[newIdx]!;
+    newTrackIds[idx] = b;
+    newTrackIds[newIdx] = a;
+
+    const previousGroups = groups;
+    setGroups((s) => s.map((gr) => (gr.id === gid ? { ...gr, trackIds: newTrackIds } : gr)));
+
+    const orderedAxisIds = groups
+      .map((gr) => (gr.id === gid ? newTrackIds : gr.trackIds))
+      .flat()
+      .map(extractAxisId)
+      .filter((axisId): axisId is string => axisId !== null);
+
+    if (orderedAxisIds.length === 0) {
+      log('축 순서 변경', '⇅', 'edit');
+      return;
+    }
+
+    reorderAxesMut.mutate(orderedAxisIds, {
+      onSuccess: () => log('축 순서 변경', '⇅', 'edit'),
+      onError: (err) => {
+        setGroups(previousGroups);
+        const msg = err instanceof ApiError ? err.message : '순서 변경에 실패했어요.';
+        toastStore.push({ message: msg, tone: 'amber' });
+      },
+    });
   };
 
   const addTrackToGroup = (gid: string) => {
@@ -602,16 +725,62 @@ export function MapPage() {
           onAddTrack={() => addTrackToGroup(activeG.id)}
           onToggleTrack={toggleTrack}
           onEditTrackName={(tid, name) => startEdit({ kind: 'trackName', tid }, name)}
-          onDeleteTrack={deleteTrack}
+          onDeleteTrack={requestDeleteTrack}
+          onMoveTrack={(tid, dir) => moveTrack(activeG.id, tid, dir)}
           onCycleStatus={cycleStatus}
           onEditNodeName={(tid, nid, name) => startEdit({ kind: 'nodeName', tid, nid }, name)}
           onDeleteNode={deleteNode}
           onStartAddNode={(tid) => startEdit({ kind: 'addNode', tid }, '')}
+          showExceedsRecommended={facade.data?.isAxisCountExceedsRecommended === true}
         />
       )}
 
       {lens === 'shape' && <ShapeLens tracks={tracks} />}
       {lens === 'hist' && <HistoryLens changes={changes} />}
+
+      <Dialog
+        open={confirmDelete !== null}
+        onClose={() => {
+          if (!deleteAxisMut.isPending) {
+            setConfirmDelete(null);
+            setDeleteError(null);
+          }
+        }}
+        title={`'${confirmDelete?.name ?? ''}' 축 삭제`}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmDelete(null);
+                setDeleteError(null);
+              }}
+              disabled={deleteAxisMut.isPending}
+              className="rounded-full border border-edge-strong bg-transparent px-4 py-2 text-[13px] font-medium text-cream-mute transition-colors hover:bg-paper-2 hover:text-cream disabled:opacity-50"
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={performDeleteTrack}
+              disabled={deleteAxisMut.isPending}
+              className="rounded-full border-0 bg-amber-deep px-4 py-2 text-[13px] font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
+            >
+              {deleteAxisMut.isPending ? '삭제 중…' : '삭제'}
+            </button>
+          </>
+        }
+      >
+        <p className="m-0 text-[14px] leading-[1.6] text-cream-mute break-keep">
+          이 축과 <span className="font-semibold text-cream">하위 주제가 모두 삭제</span>됩니다. 이
+          작업은 되돌릴 수 없어요.
+        </p>
+        {deleteError && (
+          <p role="alert" className="m-0 mt-3 text-sm text-amber-deep">
+            {deleteError}
+          </p>
+        )}
+      </Dialog>
     </AppShell>
   );
 }
@@ -862,10 +1031,12 @@ function DetailLens({
   onToggleTrack,
   onEditTrackName,
   onDeleteTrack,
+  onMoveTrack,
   onCycleStatus,
   onEditNodeName,
   onDeleteNode,
   onStartAddNode,
+  showExceedsRecommended,
 }: {
   group: MapGroup;
   tracks: MapTrack[];
@@ -881,10 +1052,12 @@ function DetailLens({
   onToggleTrack: (tid: string) => void;
   onEditTrackName: (tid: string, name: string) => void;
   onDeleteTrack: (tid: string) => void;
+  onMoveTrack: (tid: string, dir: -1 | 1) => void;
   onCycleStatus: (tid: string, nid: string) => void;
   onEditNodeName: (tid: string, nid: string, name: string) => void;
   onDeleteNode: (tid: string, nid: string) => void;
   onStartAddNode: (tid: string) => void;
+  showExceedsRecommended: boolean;
 }) {
   const editingGroupName = edit?.kind === 'groupName' && edit.gid === group.id;
   return (
@@ -935,6 +1108,15 @@ function DetailLens({
         </button>
       </div>
 
+      {showExceedsRecommended && (
+        <div className="mb-4 flex items-start gap-2.5 rounded-[12px] border border-amber-line bg-amber-soft px-4 py-3 text-[13px] text-amber-deep">
+          <Icon name="solar:info-circle-linear" width={16} height={16} className="mt-0.5 flex-shrink-0" />
+          <span className="break-keep">
+            추천 축 수를 초과했어요 — 학습 효율을 위해 5개 이하를 권장해요.
+          </span>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         {tracks.map((t, i) => (
           <TrackRow
@@ -943,6 +1125,8 @@ function DetailLens({
             index={i}
             edit={edit}
             draft={draft}
+            canMoveUp={i > 0}
+            canMoveDown={i < tracks.length - 1}
             onDraft={onDraft}
             onKey={onKey}
             onCommit={onCommit}
@@ -950,6 +1134,8 @@ function DetailLens({
             onToggle={() => onToggleTrack(t.id)}
             onEditTrackName={() => onEditTrackName(t.id, t.name)}
             onDeleteTrack={() => onDeleteTrack(t.id)}
+            onMoveUp={() => onMoveTrack(t.id, -1)}
+            onMoveDown={() => onMoveTrack(t.id, 1)}
             onCycleStatus={(nid) => onCycleStatus(t.id, nid)}
             onEditNodeName={(nid, name) => onEditNodeName(t.id, nid, name)}
             onDeleteNode={(nid) => onDeleteNode(t.id, nid)}
@@ -966,12 +1152,16 @@ function TrackRow({
   index,
   edit,
   draft,
+  canMoveUp,
+  canMoveDown,
   onDraft,
   onKey,
   onCommit,
   onToggle,
   onEditTrackName,
   onDeleteTrack,
+  onMoveUp,
+  onMoveDown,
   onCycleStatus,
   onEditNodeName,
   onDeleteNode,
@@ -981,6 +1171,8 @@ function TrackRow({
   index: number;
   edit: EditKind | null;
   draft: string;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   onDraft: (v: string) => void;
   onKey: (e: KeyboardEvent<HTMLInputElement>) => void;
   onCommit: () => void;
@@ -988,6 +1180,8 @@ function TrackRow({
   onToggle: () => void;
   onEditTrackName: () => void;
   onDeleteTrack: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onCycleStatus: (nid: string) => void;
   onEditNodeName: (nid: string, name: string) => void;
   onDeleteNode: (nid: string) => void;
@@ -1058,6 +1252,26 @@ function TrackRow({
         >
           <button
             type="button"
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+            title="위로 이동"
+            aria-label="축 위로 이동"
+            className="grid h-7 w-7 place-items-center rounded-md border border-edge bg-canvas text-cream-faint transition-colors hover:border-amber-line hover:text-amber disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-edge disabled:hover:text-cream-faint"
+          >
+            <Icon name="solar:alt-arrow-up-linear" width={14} height={14} />
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            title="아래로 이동"
+            aria-label="축 아래로 이동"
+            className="grid h-7 w-7 place-items-center rounded-md border border-edge bg-canvas text-cream-faint transition-colors hover:border-amber-line hover:text-amber disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-edge disabled:hover:text-cream-faint"
+          >
+            <Icon name="solar:alt-arrow-down-linear" width={14} height={14} />
+          </button>
+          <button
+            type="button"
             onClick={onEditTrackName}
             title="축 이름 수정"
             className="grid h-7 w-7 place-items-center rounded-md border border-edge bg-canvas text-cream-faint hover:border-amber-line hover:text-amber"
@@ -1067,7 +1281,7 @@ function TrackRow({
           <button
             type="button"
             onClick={onDeleteTrack}
-            title="축 비우기"
+            title="축 삭제"
             className="grid h-7 w-7 place-items-center rounded-md border border-edge bg-canvas text-cream-faint hover:border-[rgba(180,69,58,0.4)] hover:text-[#b4453a]"
           >
             <Icon name="solar:trash-bin-trash-linear" width={14} height={14} />

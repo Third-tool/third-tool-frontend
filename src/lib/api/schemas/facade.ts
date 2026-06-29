@@ -172,3 +172,31 @@ export const UpdateTopicResponseSchema = z.object({
   revisionCount: z.number().int().nonnegative().optional(),
 });
 export type UpdateTopicResponse = z.infer<typeof UpdateTopicResponseSchema>;
+
+// PATCH /api/v1/learning-facade/axes/{axisId} { name } — rename axis only
+export const RenameAxisRequestSchema = z.object({ name: z.string().min(1) });
+export type RenameAxisRequest = z.infer<typeof RenameAxisRequestSchema>;
+
+export const RenameAxisResponseSchema = z.object({
+  axisId: z.string(),
+  name: z.string(),
+  displayOrder: z.number().int().nonnegative(),
+});
+export type RenameAxisResponse = z.infer<typeof RenameAxisResponseSchema>;
+
+// PUT /api/v1/learning-facade/axes/order { orderedAxisIds }
+export const ReorderAxesRequestSchema = z.object({
+  orderedAxisIds: z.array(z.coerce.string()).min(1),
+});
+export type ReorderAxesRequest = z.infer<typeof ReorderAxesRequestSchema>;
+
+export const ReorderAxesResponseSchema = z.object({
+  axes: z.array(
+    z.object({
+      axisId: z.string(),
+      name: z.string(),
+      displayOrder: z.number().int().nonnegative(),
+    }),
+  ),
+});
+export type ReorderAxesResponse = z.infer<typeof ReorderAxesResponseSchema>;
