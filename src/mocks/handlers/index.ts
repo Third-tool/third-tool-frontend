@@ -3,6 +3,7 @@ import { cardHandlers } from './card.handlers';
 import { authHandlers } from './auth.handlers';
 import { tagHandlers } from './tag.handlers';
 import { deckHandlers } from './deck.handlers';
+import { reviewHandlers } from './review.handlers';
 
 export const handlers = [
   ...authHandlers,
@@ -10,4 +11,5 @@ export const handlers = [
   ...cardHandlers,
   ...tagHandlers,
   ...deckHandlers,
+  ...reviewHandlers,
 ];

@@ -70,6 +70,50 @@ const STATE_TO_DAY: Record<SoftScheduleState, ReviewStateLabel> = {
   INTERVAL_21D: 'DAY_7',
 };
 
+// ─── Review BC session schemas (R-1 ~ R-4) ───────────────────────────────────
+// Backend Review BC drives RECALLING → COMPARING progression and viewCount per
+// card. keywordCues + summary are populated only after the COMPARING flip.
+
+export const ReviewStepSchema = z.enum(['RECALLING', 'COMPARING']);
+export type ReviewStep = z.infer<typeof ReviewStepSchema>;
+
+export const ReviewCardSchema = z.object({
+  cardReviewId: z.coerce.string(),
+  cardId: z.coerce.string(),
+  cardOrder: z.number().int().nonnegative(),
+  reviewStep: ReviewStepSchema,
+  isLastView: z.boolean(),
+  mainNote: z.object({ text: z.string() }),
+  keywordCues: z.array(z.object({ value: z.string() })).optional(),
+  summary: z.string().nullable().optional(),
+  comparingStartedAt: z.string().nullable().optional(),
+});
+export type ReviewCard = z.infer<typeof ReviewCardSchema>;
+
+export const ReviewSessionResponseSchema = z.object({
+  sessionId: z.coerce.string(),
+  deckId: z.coerce.string(),
+  deckName: z.string(),
+  totalCardCount: z.number().int().nonnegative(),
+  currentIndex: z.number().int().nonnegative(),
+  isFinished: z.boolean(),
+  currentCard: ReviewCardSchema.nullable(),
+});
+export type ReviewSessionResponse = z.infer<typeof ReviewSessionResponseSchema>;
+
+export const NextCardResponseSchema = z.object({
+  sessionId: z.coerce.string(),
+  currentIndex: z.number().int().nonnegative(),
+  isFinished: z.boolean(),
+  currentCard: ReviewCardSchema.nullable(),
+});
+export type NextCardResponse = z.infer<typeof NextCardResponseSchema>;
+
+export const StartReviewRequestSchema = z.object({
+  deckId: z.coerce.string(),
+});
+export type StartReviewRequest = z.infer<typeof StartReviewRequestSchema>;
+
 export function adaptTodayCandidates(raw: TodayCandidates): ReviewSession {
   const cards: ReviewSessionCard[] = [];
   const breakdown = { DAY_1: 0, DAY_3: 0, DAY_7: 0 };

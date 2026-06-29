@@ -12,7 +12,7 @@ interface RawKeywordDto {
   id: number;
   value: string;
 }
-interface MockCard {
+export interface MockCard {
   cardId: number;
   deckId: number;
   status: 'ON_FIELD' | 'ARCHIVE';
@@ -27,7 +27,7 @@ interface MockCard {
   updatedDate: string;
 }
 
-interface MockState {
+export interface MockState {
   cards: Map<number, MockCard>;
   nextId: number;
 }
@@ -90,6 +90,12 @@ export function resetCardMockState(): void {
   const fresh = seed();
   state.cards = fresh.cards;
   state.nextId = fresh.nextId;
+}
+
+// Exposed so review.handlers can read/mutate cards (start session from ON_FIELD
+// pool, bump viewCount on PATCH /reviews/:id/next).
+export function getCardMockState(): MockState {
+  return state;
 }
 
 type SoftScheduleState = 'FRESH' | 'INTERVAL_1D' | 'INTERVAL_3D' | 'INTERVAL_7D' | 'INTERVAL_14D' | 'INTERVAL_21D';
