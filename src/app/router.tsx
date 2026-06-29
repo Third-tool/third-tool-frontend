@@ -16,6 +16,7 @@ import { MePage } from '@/features/me/MePage';
 import { MapPage } from '@/features/map/MapPage';
 import { TagsListPage } from '@/features/tags/TagsListPage';
 import { TagDetailPage } from '@/features/tags/TagDetailPage';
+import { DecksPage } from '@/features/decks/DecksPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -25,7 +26,7 @@ export const router = createBrowserRouter([
   {
     path: '/onboarding',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute redirectIfConcept="/map">
         <OnboardingPage />
       </ProtectedRoute>
     ),
@@ -91,6 +92,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute requireConcept>
         <TagsListPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/decks',
+    element: (
+      <ProtectedRoute requireConcept>
+        <DecksPage />
       </ProtectedRoute>
     ),
   },

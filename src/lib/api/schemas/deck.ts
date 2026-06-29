@@ -54,3 +54,26 @@ export const CreateDeckRequestSchema = z.object({
   parentDeckId: z.coerce.string().nullable().optional(),
 });
 export type CreateDeckRequest = z.infer<typeof CreateDeckRequestSchema>;
+
+export const RenameDeckRequestSchema = z.object({ name: z.string().min(1) });
+export type RenameDeckRequest = z.infer<typeof RenameDeckRequestSchema>;
+
+export const RenameDeckResponseSchema = z.object({
+  deckId: z.coerce.string(),
+  name: z.string(),
+});
+export type RenameDeckResponse = z.infer<typeof RenameDeckResponseSchema>;
+
+export const MoveDeckRequestSchema = z.object({
+  parentDeckId: z.coerce.string().nullable(),
+});
+export type MoveDeckRequest = z.infer<typeof MoveDeckRequestSchema>;
+
+export const MoveDeckResponseSchema = z.object({
+  deckId: z.coerce.string(),
+  parentDeckId: z.coerce.string().nullable(),
+});
+export type MoveDeckResponse = z.infer<typeof MoveDeckResponseSchema>;
+
+export const SubDeckListSchema = z.array(DeckSummarySchema);
+export type SubDeckList = z.infer<typeof SubDeckListSchema>;

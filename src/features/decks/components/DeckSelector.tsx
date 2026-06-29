@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Icon } from '@/components/Icon';
 import { useDecks } from '../hooks/useDecks';
 import { useCreateDeck } from '../hooks/useCreateDeck';
@@ -36,9 +37,17 @@ export function DeckSelector() {
 
   return (
     <div className="rounded-[11px] border border-edge bg-paper p-2.5">
-      <div className="mb-1.5 flex items-center gap-2 px-1 text-[10.5px] uppercase tracking-[0.06em] text-cream-faint">
-        <Icon name="solar:folder-linear" width={12} height={12} />
-        덱
+      <div className="mb-1.5 flex items-center justify-between gap-2 px-1 text-[10.5px] uppercase tracking-[0.06em] text-cream-faint">
+        <span className="flex items-center gap-2">
+          <Icon name="solar:folder-linear" width={12} height={12} />
+          덱
+        </span>
+        <Link
+          to="/decks"
+          className="text-[10px] font-medium normal-case tracking-normal text-cream-mute no-underline transition-colors hover:text-amber-deep"
+        >
+          관리 →
+        </Link>
       </div>
       {decks.isLoading ? (
         <div className="px-1 py-1.5 text-[11.5px] text-cream-faint">불러오는 중…</div>
