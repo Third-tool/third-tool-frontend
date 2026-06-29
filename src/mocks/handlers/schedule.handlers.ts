@@ -67,6 +67,12 @@ function initialState(): ScheduleState {
 
 const state: ScheduleState = initialState();
 
+// Exposed so review/card handlers can read maxView and softScheduleIntervals
+// without re-implementing the BE mode-mapping rules.
+export function getScheduleMockState(): ScheduleState {
+  return state;
+}
+
 export function resetScheduleMockState(): void {
   const fresh = initialState();
   Object.assign(state, fresh);

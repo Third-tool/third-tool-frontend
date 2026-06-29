@@ -1,8 +1,13 @@
 import { http, HttpResponse } from 'msw';
 import { getCardMockState, type MockCard } from './card.handlers';
+import { getScheduleMockState } from './schedule.handlers';
 
 const DEFAULT_DECK_NAME = '기본 노트';
-const MAX_VIEW = 5;
+const FALLBACK_MAX_VIEW = 5;
+
+function currentMaxView(): number {
+  return getScheduleMockState().schedule.maxView ?? FALLBACK_MAX_VIEW;
+}
 
 interface MockSession {
   sessionId: string;
@@ -28,12 +33,37 @@ function buildCard(session: MockSession, card: MockCard) {
     cardId: card.cardId,
     cardOrder: session.currentIndex + 1,
     reviewStep: session.reviewStep,
-    isLastView: card.viewCount + 1 >= MAX_VIEW,
+    isLastView: card.viewCount + 1 >= currentMaxView(),
     mainNote: { text: card.mainText },
     keywordCues: isComparing ? card.keywords.map((k) => ({ value: k.value })) : undefined,
     summary: isComparing ? card.summary : null,
     comparingStartedAt: isComparing ? session.comparingStartedAt : null,
   };
+}
+
+// Layer 1 sessions cross decks — interleave deck pools so no single deck
+// starves the queue. Single-deck scope passes through untouched.
+function roundRobinByDeck(cards: MockCard[]): MockCard[] {
+  const byDeck = new Map<number, MockCard[]>();
+  for (const c of cards) {
+    const list = byDeck.get(c.deckId);
+    if (list) list.push(c);
+    else byDeck.set(c.deckId, [c]);
+  }
+  if (byDeck.size <= 1) return cards;
+  const result: MockCard[] = [];
+  let added = true;
+  while (added) {
+    added = false;
+    for (const list of byDeck.values()) {
+      const next = list.shift();
+      if (next) {
+        result.push(next);
+        added = true;
+      }
+    }
+  }
+  return result;
 }
 
 function snapshot(session: MockSession) {
@@ -55,22 +85,40 @@ function snapshot(session: MockSession) {
 
 export const reviewHandlers = [
   http.post('/api/v1/reviews', async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as { deckId?: number | string };
-    if (body.deckId == null || body.deckId === '') {
-      return HttpResponse.json(
-        { code: 'C001', message: 'deckId required' },
-        { status: 400 },
+    const body = (await request.json().catch(() => ({}))) as {
+      deckId?: number | string;
+      scope?: 'DECK' | 'FACADE';
+    };
+    const scope = body.scope ?? 'DECK';
+
+    let cards: MockCard[];
+    let deckIdForSession: number;
+    if (scope === 'FACADE') {
+      cards = [...getCardMockState().cards.values()].filter(
+        (c) => c.status === 'ON_FIELD',
+      );
+      // FACADE scope crosses decks; pick the first card's deck for the snapshot
+      // label, or fall back to 0 if pool is empty.
+      deckIdForSession = cards[0]?.deckId ?? 0;
+    } else {
+      if (body.deckId == null || body.deckId === '') {
+        return HttpResponse.json(
+          { code: 'C001', message: 'deckId required for DECK scope' },
+          { status: 400 },
+        );
+      }
+      deckIdForSession = Number(body.deckId);
+      cards = [...getCardMockState().cards.values()].filter(
+        (c) => c.deckId === deckIdForSession && c.status === 'ON_FIELD',
       );
     }
-    const deckId = Number(body.deckId);
-    const cards = [...getCardMockState().cards.values()].filter(
-      (c) => c.deckId === deckId && c.status === 'ON_FIELD',
-    );
+
+    const ordered = roundRobinByDeck(cards);
     const sessionId = `session-${nextSessionId++}`;
     const session: MockSession = {
       sessionId,
-      deckId,
-      cardIds: cards.map((c) => c.cardId),
+      deckId: deckIdForSession,
+      cardIds: ordered.map((c) => c.cardId),
       currentIndex: 0,
       reviewStep: 'RECALLING',
       comparingStartedAt: null,
@@ -127,11 +175,12 @@ export const reviewHandlers = [
       if (card) {
         const now = new Date().toISOString();
         const nextViewCount = card.viewCount + 1;
+        const maxView = currentMaxView();
         const updated: MockCard = {
           ...card,
           viewCount: nextViewCount,
           lastViewedAt: now,
-          status: nextViewCount >= MAX_VIEW ? 'ARCHIVE' : card.status,
+          status: nextViewCount >= maxView ? 'ARCHIVE' : card.status,
           updatedDate: now,
         };
         cardState.cards.set(leavingId, updated);

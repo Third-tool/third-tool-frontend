@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import { getScheduleMockState } from './schedule.handlers';
 
 const DEFAULT_DECK_ID = 1;
 const DEFAULT_DECK_NAME = '기본 노트';
@@ -100,11 +101,26 @@ export function getCardMockState(): MockState {
 
 type SoftScheduleState = 'FRESH' | 'INTERVAL_1D' | 'INTERVAL_3D' | 'INTERVAL_7D' | 'INTERVAL_14D' | 'INTERVAL_21D';
 
+function daysToState(days: number): SoftScheduleState {
+  switch (days) {
+    case 1: return 'INTERVAL_1D';
+    case 3: return 'INTERVAL_3D';
+    case 7: return 'INTERVAL_7D';
+    case 14: return 'INTERVAL_14D';
+    // BE enum tops out at INTERVAL_21D; MODE_30D's 30-day cadence collapses here.
+    default: return 'INTERVAL_21D';
+  }
+}
+
+// Reads the user's current schedule (MODE_10D/20D/30D) and maps viewCount to
+// the position in softScheduleIntervals — so MODE_10D ([1,3,7]) tops out at
+// INTERVAL_7D after 3 reviews, while MODE_30D ([1,3,7,14,30]) keeps climbing.
 function stateForViewCount(viewCount: number): SoftScheduleState {
   if (viewCount <= 0) return 'FRESH';
-  if (viewCount === 1) return 'INTERVAL_1D';
-  if (viewCount === 2) return 'INTERVAL_3D';
-  return 'INTERVAL_7D';
+  const intervals = getScheduleMockState().schedule.softScheduleIntervals;
+  if (intervals.length === 0) return 'INTERVAL_1D';
+  const idx = Math.min(viewCount - 1, intervals.length - 1);
+  return daysToState(intervals[idx]!);
 }
 
 function toDetail(c: MockCard) {
