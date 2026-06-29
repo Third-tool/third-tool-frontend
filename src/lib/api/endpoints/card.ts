@@ -4,10 +4,17 @@ import {
   CreateCardRequestSchema,
   RawCardDetailSchema,
   RawCardSummarySchema,
+  AddTagRequestSchema,
+  CardTagsResponseSchema,
+  UpdateSummaryRequestSchema,
+  UpdateSummaryResponseSchema,
   adaptCardDetail,
   adaptCardSummary,
+  adaptCardTags,
   type Card,
   type CreateCardRequest,
+  type TagOnCard,
+  type UpdateSummaryResponse,
 } from '@/lib/api/schemas/card';
 import {
   ExtendReviewResponseSchema,
@@ -45,6 +52,44 @@ export async function returnToField(cardId: string): Promise<Card> {
   const { data } = await apiClient.post(`/api/v1/cards/${cardId}/return-to-field`);
   const raw = RawCardDetailSchema.parse(data);
   return adaptCardDetail(raw);
+}
+
+export async function getCard(cardId: string): Promise<Card> {
+  const { data } = await apiClient.get(`/api/v1/cards/${cardId}`);
+  const raw = RawCardDetailSchema.parse(data);
+  return adaptCardDetail(raw);
+}
+
+export async function addCardTag(
+  cardId: string,
+  value: string,
+): Promise<{ cardId: string; tags: TagOnCard[] }> {
+  const validated = AddTagRequestSchema.parse({ value });
+  const { data } = await apiClient.post(`/api/v1/cards/${cardId}/tags`, validated);
+  const raw = CardTagsResponseSchema.parse(data);
+  return adaptCardTags(raw);
+}
+
+export async function removeCardTag(
+  cardId: string,
+  tagId: string,
+): Promise<{ cardId: string; tags: TagOnCard[] }> {
+  const { data } = await apiClient.delete(`/api/v1/cards/${cardId}/tags/${tagId}`);
+  const raw = CardTagsResponseSchema.parse(data);
+  return adaptCardTags(raw);
+}
+
+export async function updateCardSummary(
+  cardId: string,
+  summary: string,
+): Promise<UpdateSummaryResponse> {
+  const validated = UpdateSummaryRequestSchema.parse({ summary });
+  const { data } = await apiClient.patch(`/api/v1/cards/${cardId}/summary`, validated);
+  return UpdateSummaryResponseSchema.parse(data);
+}
+
+export async function deleteCard(cardId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/cards/${cardId}`);
 }
 
 export async function createCard(payload: CreateCardRequest): Promise<Card> {

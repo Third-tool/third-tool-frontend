@@ -155,6 +155,110 @@ export const cardHandlers = [
     return HttpResponse.json({ total, dailyTarget: target, recommendedTotal, recommendedByState, byState });
   }),
 
+  http.get('/api/v1/cards/:id', ({ params }) => {
+    const id = Number(params.id);
+    const c = state.cards.get(id);
+    if (!c) {
+      return HttpResponse.json(
+        { code: 'CARD_NOT_FOUND', message: '카드를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(toDetail(c));
+  }),
+
+  http.post('/api/v1/cards/:id/tags', async ({ params, request }) => {
+    const id = Number(params.id);
+    const c = state.cards.get(id);
+    if (!c) {
+      return HttpResponse.json(
+        { code: 'CARD_NOT_FOUND', message: '카드를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json().catch(() => ({}))) as { value?: string };
+    const value = body.value?.trim();
+    if (!value) {
+      return HttpResponse.json(
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { status: 400 },
+      );
+    }
+    if (c.tags.some((t) => t.value === value)) {
+      return HttpResponse.json(
+        { code: 'CARD_TAG_ALREADY_EXISTS', message: '이미 있는 태그예요' },
+        { status: 409 },
+      );
+    }
+    if (c.tags.length >= 3) {
+      return HttpResponse.json(
+        { code: 'CARD_TAG_LIMIT_EXCEEDED', message: '태그는 최대 3개까지' },
+        { status: 400 },
+      );
+    }
+    const newTag = tag(state.nextId++, value);
+    const updated: MockCard = {
+      ...c,
+      tags: [...c.tags, newTag],
+      updatedDate: new Date().toISOString(),
+    };
+    state.cards.set(id, updated);
+    return HttpResponse.json({ cardId: updated.cardId, tags: updated.tags });
+  }),
+
+  http.delete('/api/v1/cards/:id/tags/:tagId', ({ params }) => {
+    const id = Number(params.id);
+    const tagId = Number(params.tagId);
+    const c = state.cards.get(id);
+    if (!c) {
+      return HttpResponse.json(
+        { code: 'CARD_NOT_FOUND', message: '카드를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    const updated: MockCard = {
+      ...c,
+      tags: c.tags.filter((t) => t.id !== tagId),
+      updatedDate: new Date().toISOString(),
+    };
+    state.cards.set(id, updated);
+    return HttpResponse.json({ cardId: updated.cardId, tags: updated.tags });
+  }),
+
+  http.patch('/api/v1/cards/:id/summary', async ({ params, request }) => {
+    const id = Number(params.id);
+    const c = state.cards.get(id);
+    if (!c) {
+      return HttpResponse.json(
+        { code: 'CARD_NOT_FOUND', message: '카드를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    const body = (await request.json().catch(() => ({}))) as { summary?: string };
+    const summary = body.summary?.trim();
+    if (!summary) {
+      return HttpResponse.json(
+        { code: 'C001', message: '요약을 입력해주세요.' },
+        { status: 400 },
+      );
+    }
+    const updated: MockCard = { ...c, summary, updatedDate: new Date().toISOString() };
+    state.cards.set(id, updated);
+    return HttpResponse.json({ cardId: updated.cardId, summary: updated.summary });
+  }),
+
+  http.delete('/api/v1/cards/:id', ({ params }) => {
+    const id = Number(params.id);
+    if (!state.cards.has(id)) {
+      return HttpResponse.json(
+        { code: 'CARD_NOT_FOUND', message: '카드를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    state.cards.delete(id);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.post('/api/v1/cards/:id/archive', ({ params }) => {
     const id = Number(params.id);
     const c = state.cards.get(id);

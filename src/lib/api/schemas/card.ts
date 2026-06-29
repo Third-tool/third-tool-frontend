@@ -138,3 +138,37 @@ export function adaptCardSummary(raw: RawCardSummary, deckId?: string): Card {
     lastViewedAt: raw.lastViewedAt ?? null,
   };
 }
+
+// POST /api/v1/cards/{cardId}/tags { value } — find-or-create with limit 3
+export const AddTagRequestSchema = z.object({ value: z.string().min(1) });
+export type AddTagRequest = z.infer<typeof AddTagRequestSchema>;
+
+// Both POST /tags and DELETE /tags/{tagId} return the same shape: card + full tags.
+export const CardTagsResponseSchema = z.object({
+  cardId: z.coerce.string(),
+  tags: z.array(
+    z.object({
+      id: z.coerce.string(),
+      value: z.string(),
+      linkedAt: z.string().nullable().optional(),
+    }),
+  ),
+});
+export type CardTagsResponse = z.infer<typeof CardTagsResponseSchema>;
+
+export function adaptCardTags(raw: CardTagsResponse): { cardId: string; tags: TagOnCard[] } {
+  return {
+    cardId: raw.cardId,
+    tags: raw.tags.map((t) => ({ tagId: t.id, name: t.value })),
+  };
+}
+
+// PATCH /api/v1/cards/{cardId}/summary { summary }
+export const UpdateSummaryRequestSchema = z.object({ summary: z.string().min(1) });
+export type UpdateSummaryRequest = z.infer<typeof UpdateSummaryRequestSchema>;
+
+export const UpdateSummaryResponseSchema = z.object({
+  cardId: z.coerce.string(),
+  summary: z.string(),
+});
+export type UpdateSummaryResponse = z.infer<typeof UpdateSummaryResponseSchema>;
