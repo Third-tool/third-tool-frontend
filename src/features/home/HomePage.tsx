@@ -4,6 +4,8 @@ import { Icon } from '@/components/Icon';
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser';
 import { useLearningFacade } from '@/features/auth/hooks/useLearningFacade';
 import { useTodayReview } from '@/features/cards/hooks/useTodayReview';
+import { useCompletedToday } from '@/features/cards/hooks/useCompletedToday';
+import { useMySchedule } from '@/features/schedule/hooks/useMySchedule';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const WEEK_BARS = [
@@ -26,6 +28,14 @@ export function HomePage() {
   const user = useCurrentUser();
   const facade = useLearningFacade();
   const today = useTodayReview();
+  const completedToday = useCompletedToday();
+  const schedule = useMySchedule();
+  const dailyTarget = schedule.data?.schedule.dailyTarget ?? null;
+  const targetReached = dailyTarget !== null && completedToday.count >= dailyTarget;
+  const targetPct =
+    dailyTarget !== null
+      ? Math.min(100, Math.round((completedToday.count / dailyTarget) * 100))
+      : 0;
 
   const now = new Date();
   const nickname = user.data?.nickname ?? '도연';
@@ -45,14 +55,53 @@ export function HomePage() {
   const concept = facade.data?.concept ?? '학습 지도';
 
   const sidebarContext = (
-    <div className="rounded-[14px] border border-edge bg-surface px-4 py-[15px]">
-      <div className="mb-2.5 text-[11px] uppercase tracking-[var(--tracking-eyebrow)] text-cream-faint">
-        연속 학습
+    <div className="flex flex-col gap-2.5">
+      <div className="rounded-[14px] border border-edge bg-surface px-4 py-[15px]">
+        <div className="mb-2.5 text-[11px] uppercase tracking-[var(--tracking-eyebrow)] text-cream-faint">
+          연속 학습
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-serif text-[28px] font-medium leading-none text-cream">12</span>
+          <span className="text-xs text-cream-mute">일째 곁에 앉았어요</span>
+        </div>
       </div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="font-serif text-[28px] font-medium leading-none text-cream">12</span>
-        <span className="text-xs text-cream-mute">일째 곁에 앉았어요</span>
-      </div>
+      {dailyTarget !== null && (
+        <div
+          className={`rounded-[14px] border px-4 py-[15px] ${
+            targetReached ? 'border-sage-soft bg-sage-soft/40' : 'border-edge bg-surface'
+          }`}
+        >
+          <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[var(--tracking-eyebrow)] text-cream-faint">
+            <span>오늘 목표</span>
+            {targetReached && (
+              <span className="font-semibold normal-case tracking-normal text-sage-ink">
+                달성 ✓
+              </span>
+            )}
+          </div>
+          <div className="mb-2 flex items-baseline gap-1.5">
+            <span
+              className={`font-serif text-[24px] font-medium leading-none tabular-nums ${
+                targetReached ? 'text-sage-ink' : 'text-cream'
+              }`}
+            >
+              {completedToday.count}
+            </span>
+            <span className="text-xs text-cream-mute">/ {dailyTarget}장</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-paper-2">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${targetPct}%`,
+                background: targetReached
+                  ? 'var(--color-sage)'
+                  : 'linear-gradient(90deg, var(--color-amber), var(--color-amber-deep))',
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 

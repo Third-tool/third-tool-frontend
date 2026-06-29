@@ -9,6 +9,9 @@ import { useDecks } from '@/features/decks/hooks/useDecks';
 import { useStartReview, reviewSessionKey } from './hooks/useStartReview';
 import { useFlipToComparing } from './hooks/useFlipToComparing';
 import { useMoveToNext } from './hooks/useMoveToNext';
+import { bumpCompletedToday, useCompletedToday } from './hooks/useCompletedToday';
+import { useMySchedule } from '@/features/schedule/hooks/useMySchedule';
+import { toastStore } from '@/lib/toast/toastQueue';
 import { useQuery } from '@tanstack/react-query';
 import { getReviewSession } from '@/lib/api/endpoints/review';
 import type { ReviewCard, ReviewSessionResponse } from '@/lib/api/schemas/review';
@@ -23,10 +26,14 @@ export function StudyPage() {
   const [completedCardCount, setCompletedCardCount] = useState(0);
   const [startError, setStartError] = useState<string | null>(null);
   const startedRef = useRef<string | null>(null);
+  const targetToastFiredRef = useRef(false);
 
   const start = useStartReview();
   const flip = useFlipToComparing(sessionId);
   const advance = useMoveToNext(sessionId);
+  const completedToday = useCompletedToday();
+  const scheduleQuery = useMySchedule();
+  const dailyTarget = scheduleQuery.data?.schedule.dailyTarget ?? null;
 
   const sessionQuery = useQuery({
     queryKey: sessionId ? reviewSessionKey(sessionId) : ['reviews', 'idle'],
@@ -68,6 +75,20 @@ export function StudyPage() {
     advance.mutate(undefined, {
       onSuccess: () => {
         setCompletedCardCount((s) => s + 1);
+        const before = completedToday.count;
+        const after = bumpCompletedToday();
+        if (
+          dailyTarget !== null &&
+          !targetToastFiredRef.current &&
+          before < dailyTarget &&
+          after >= dailyTarget
+        ) {
+          targetToastFiredRef.current = true;
+          toastStore.push({
+            message: `오늘 목표 ${dailyTarget}장을 모두 마쳤어요. 더 이어가도 좋아요.`,
+            tone: 'amber',
+          });
+        }
       },
     });
   };
@@ -77,6 +98,7 @@ export function StudyPage() {
     setSessionId(null);
     setCompletedCardCount(0);
     startedRef.current = null;
+    targetToastFiredRef.current = false;
     setStartError(null);
   };
 
@@ -96,7 +118,12 @@ export function StudyPage() {
         )}
 
         {session && session.isFinished && (
-          <DonePanel completedCardCount={completedCardCount} onRestart={restart} />
+          <DonePanel
+            completedCardCount={completedCardCount}
+            completedToday={completedToday.count}
+            dailyTarget={dailyTarget}
+            onRestart={restart}
+          />
         )}
 
         {session && !session.isFinished && session.currentCard && (
@@ -327,11 +354,18 @@ function CornellSheet({
 
 function DonePanel({
   completedCardCount,
+  completedToday,
+  dailyTarget,
   onRestart,
 }: {
   completedCardCount: number;
+  completedToday: number;
+  dailyTarget: number | null;
   onRestart: () => void;
 }) {
+  const targetReached = dailyTarget !== null && completedToday >= dailyTarget;
+  const remaining =
+    dailyTarget !== null ? Math.max(0, dailyTarget - completedToday) : 0;
   return (
     <div
       className="w-full max-w-[520px] pt-12 text-center"
@@ -346,14 +380,44 @@ function DonePanel({
       <p className="m-0 mx-auto mb-8 max-w-[42ch] text-base leading-[1.7] text-cream-mute break-keep">
         자료를 보고 떠올린 단서와 요약이 기억을 다시 단단하게 만들었어요. 또렷했던 카드는 배경에서 쉬어요.
       </p>
-      <div className="mb-9 flex justify-center gap-3.5">
+      <div className="mb-7 flex justify-center gap-3.5">
         <div className="w-[200px] rounded-[16px] border border-edge bg-surface p-5">
           <div className="font-serif text-[32px] font-medium leading-none text-cream">
             {completedCardCount}
           </div>
           <div className="mt-[7px] text-xs text-cream-faint">오늘 만난 카드</div>
         </div>
+        {dailyTarget !== null && (
+          <div
+            className={`w-[200px] rounded-[16px] border p-5 ${
+              targetReached
+                ? 'border-sage-soft bg-sage-soft/40'
+                : 'border-edge bg-surface'
+            }`}
+          >
+            <div
+              className={`font-serif text-[32px] font-medium leading-none ${
+                targetReached ? 'text-sage-ink' : 'text-cream'
+              }`}
+            >
+              {completedToday}
+              <span className="text-[18px] text-cream-faint"> / {dailyTarget}</span>
+            </div>
+            <div className="mt-[7px] text-xs text-cream-faint">오늘 누적</div>
+          </div>
+        )}
       </div>
+      {dailyTarget !== null && targetReached && (
+        <div className="mx-auto mb-9 inline-flex items-center gap-2 rounded-full bg-sage-soft px-4 py-2 text-[12.5px] font-semibold text-sage-ink">
+          <Icon name="solar:check-circle-linear" width={14} height={14} />
+          오늘 목표 달성
+        </div>
+      )}
+      {dailyTarget !== null && !targetReached && remaining > 0 && (
+        <p className="m-0 mb-9 text-[12.5px] text-cream-faint">
+          목표까지 <span className="font-semibold text-cream-mute">{remaining}장</span> 남았어요.
+        </p>
+      )}
       <div className="flex justify-center gap-3">
         <Link
           to="/home"
