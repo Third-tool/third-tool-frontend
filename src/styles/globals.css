@@ -1,0 +1,65 @@
+@import "./tokens.css";
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body, #root { min-height: 100dvh; }
+  html { font-family: var(--font-ko); -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: var(--color-cream);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  :focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(2rem); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes scroll-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.05); }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(1.08); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ---- Markdown body (Study/Card shared) ---- */
+.md-body { font-size: 15px; line-height: 1.78; color: var(--color-cream-mute); }
+.md-body > *:first-child { margin-top: 0; }
+.md-body h2 { font-family: var(--font-serif); font-weight: 600; font-size: 23px; color: var(--color-cream); margin: 0 0 14px; letter-spacing: -0.01em; }
+.md-body h3 { font-family: var(--font-serif); font-weight: 600; font-size: 18px; color: var(--color-cream); margin: 22px 0 9px; }
+.md-body p { margin: 0 0 15px; word-break: keep-all; }
+.md-body ul, .md-body ol { margin: 0 0 15px; padding-left: 20px; }
+.md-body li { margin-bottom: 7px; word-break: keep-all; }
+.md-body code { font-family: ui-monospace, 'SF Mono', monospace; font-size: 13px; background: var(--color-paper-2); padding: 2px 6px; border-radius: 5px; color: var(--color-amber-deep); }
+.md-body pre { background: #26221c; padding: 16px 18px; border-radius: 12px; overflow-x: auto; margin: 0 0 16px; }
+.md-body pre code { background: transparent; color: #f3ecdf; padding: 0; font-size: 12.5px; line-height: 1.65; }
+.md-body img { width: 100%; border-radius: 12px; margin: 4px 0 16px; border: 1px solid var(--color-edge); display: block; }
+.md-body blockquote { border-left: 3px solid var(--color-amber-line); margin: 0 0 15px; padding: 3px 0 3px 16px; color: var(--color-cream-faint); font-style: italic; }
+.md-body strong { color: var(--color-cream); font-weight: 600; }
+.md-body a { color: var(--color-amber-deep); }
