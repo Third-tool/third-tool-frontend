@@ -4,6 +4,7 @@ import {
   DeckDetailSchema,
   DeckPageSchema,
   CreateDeckRequestSchema,
+  CreateAxisDeckRequestSchema,
   RenameDeckRequestSchema,
   RenameDeckResponseSchema,
   MoveDeckRequestSchema,
@@ -38,6 +39,20 @@ export async function getDeck(deckId: string): Promise<DeckDetail> {
 export async function createDeck(payload: CreateDeckRequest): Promise<DeckCreateResponse> {
   const validated = CreateDeckRequestSchema.parse(payload);
   const { data } = await apiClient.post('/api/v1/decks', validated);
+  return DeckCreateResponseSchema.parse(data);
+}
+
+// Creates a deck already linked to the given axis (cards land inside the axis
+// scope, so they appear in the axis view + today feed instead of an orphan deck).
+export async function createAxisDeck(
+  axisId: string,
+  name: string,
+): Promise<DeckCreateResponse> {
+  const validated = CreateAxisDeckRequestSchema.parse({ name });
+  const { data } = await apiClient.post(
+    `/api/v1/learning-facade/axes/${axisId}/decks`,
+    validated,
+  );
   return DeckCreateResponseSchema.parse(data);
 }
 

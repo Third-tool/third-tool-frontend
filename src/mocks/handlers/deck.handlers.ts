@@ -14,6 +14,7 @@ function computeProgress(deckId: number): DeckProgress {
 interface MockDeck {
   deckId: number;
   name: string;
+  axisId: number | null;
   parentDeckId: number | null;
   depth: number;
   onLibrary: boolean;
@@ -45,6 +46,7 @@ function seedDecks(): DeckState {
         {
           deckId: 1,
           name: '기본 노트',
+          axisId: 1,
           parentDeckId: null,
           depth: 0,
           onLibrary: false,
@@ -87,6 +89,7 @@ function toSummary(d: MockDeck) {
   return {
     deckId: d.deckId,
     name: d.name,
+    axisId: d.axisId,
     depth: d.depth,
     onLibrary: d.onLibrary,
     lastAccessed: d.lastAccessed,
@@ -100,6 +103,7 @@ function toDetail(d: MockDeck) {
   return {
     deckId: d.deckId,
     name: d.name,
+    axisId: d.axisId,
     parentDeckId: d.parentDeckId,
     depth: d.depth,
     onLibrary: d.onLibrary,
@@ -150,6 +154,7 @@ export const deckHandlers = [
     const created: MockDeck = {
       deckId: id,
       name: body.name,
+      axisId: null,
       parentDeckId: parentId,
       depth: parent ? parent.depth + 1 : 0,
       onLibrary: false,
@@ -169,6 +174,47 @@ export const deckHandlers = [
       {
         deckId: created.deckId,
         name: created.name,
+        parentDeckId: created.parentDeckId,
+        depth: created.depth,
+        onLibrary: created.onLibrary,
+        publishedAt: created.publishedAt,
+        lastAccessed: created.lastAccessed,
+        createdDate: created.createdDate,
+      },
+      { status: 201 },
+    );
+  }),
+
+  // Plan ref: FE 002.md Issue 4 / BE A2 — create a deck already linked to an axis.
+  http.post('/api/v1/learning-facade/axes/:axisId/decks', async ({ params, request }) => {
+    const axisId = Number(params.axisId);
+    const body = (await request.json()) as { name?: string };
+    if (!body.name?.trim()) {
+      return HttpResponse.json({ code: 'DECK004', message: 'name required' }, { status: 400 });
+    }
+    const id = state.nextId++;
+    const ts = new Date().toISOString();
+    const created: MockDeck = {
+      deckId: id,
+      name: body.name.trim(),
+      axisId,
+      parentDeckId: null,
+      depth: 0,
+      onLibrary: false,
+      publishedAt: null,
+      lastAccessed: ts,
+      cardCount: 0,
+      subDeckCount: 0,
+      createdDate: ts,
+      updatedDate: ts,
+    };
+    state.decks.set(id, created);
+    persist();
+    return HttpResponse.json(
+      {
+        deckId: created.deckId,
+        name: created.name,
+        axisId: created.axisId,
         parentDeckId: created.parentDeckId,
         depth: created.depth,
         onLibrary: created.onLibrary,
