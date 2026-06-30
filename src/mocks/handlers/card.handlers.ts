@@ -157,7 +157,7 @@ function toDetail(c: MockCard) {
   return {
     cardId: c.cardId,
     deckId: c.deckId,
-    mainNote: { textContent: c.mainText, imageUrl: null, contentType: 'TEXT' },
+    mainNote: { textContent: c.mainText, imageUrl: null, contentType: 'TEXT_ONLY' },
     keywords: c.keywords,
     summary: c.summary,
     tags: c.tags,
@@ -176,7 +176,7 @@ function toSummary(c: MockCard) {
     keywords: c.keywords,
     summary: c.summary,
     tags: c.tags,
-    contentType: 'TEXT' as const,
+    contentType: 'TEXT_ONLY' as const,
     status: c.status,
     enteredFieldAt: c.enteredFieldAt,
     viewCount: c.viewCount,

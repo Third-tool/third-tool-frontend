@@ -15,6 +15,10 @@ export type DeckProgressStatus = z.infer<typeof DeckProgressStatusSchema>;
 export const DeckSummarySchema = z.object({
   deckId: z.coerce.string(),
   name: z.string(),
+  // axisId/axisName: the LearningAxis this deck is linked to (null = orphan deck,
+  // not in any axis). Exposed so the card editor can group decks by axis.
+  axisId: z.coerce.string().nullable().optional(),
+  axisName: z.string().nullable().optional(),
   depth: z.number().int().nonnegative(),
   onLibrary: z.boolean(),
   lastAccessed: z.string().nullable().optional(),
@@ -27,6 +31,8 @@ export type DeckSummary = z.infer<typeof DeckSummarySchema>;
 export const DeckDetailSchema = z.object({
   deckId: z.coerce.string(),
   name: z.string(),
+  axisId: z.coerce.string().nullable().optional(),
+  axisName: z.string().nullable().optional(),
   parentDeckId: z.coerce.string().nullable().optional(),
   depth: z.number().int().nonnegative(),
   onLibrary: z.boolean(),
@@ -43,6 +49,8 @@ export type DeckDetail = z.infer<typeof DeckDetailSchema>;
 export const DeckCreateResponseSchema = z.object({
   deckId: z.coerce.string(),
   name: z.string(),
+  axisId: z.coerce.string().nullable().optional(),
+  axisName: z.string().nullable().optional(),
   parentDeckId: z.coerce.string().nullable().optional(),
   depth: z.number().int().nonnegative(),
   onLibrary: z.boolean(),
@@ -51,6 +59,12 @@ export const DeckCreateResponseSchema = z.object({
   createdDate: z.string().optional(),
 });
 export type DeckCreateResponse = z.infer<typeof DeckCreateResponseSchema>;
+
+// POST /api/v1/learning-facade/axes/{axisId}/decks { name } — creates a deck
+// already linked to the axis (so its cards show up in that axis + today feed).
+// Plan ref: FE 002.md Issue 4 / BE refactor-fe-intent.md A2 (B안).
+export const CreateAxisDeckRequestSchema = z.object({ name: z.string().min(1) });
+export type CreateAxisDeckRequest = z.infer<typeof CreateAxisDeckRequestSchema>;
 
 export const DeckPageSchema = z.object({
   content: z.array(DeckSummarySchema),

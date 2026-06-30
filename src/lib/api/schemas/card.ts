@@ -6,7 +6,8 @@ export type CardStatus = z.infer<typeof CardStatusSchema>;
 export const ArchiveReasonSchema = z.enum(['MANUAL', 'MAX_VIEW', 'MAX_DURATION']);
 export type ArchiveReason = z.infer<typeof ArchiveReasonSchema>;
 
-export const MainContentTypeSchema = z.enum(['TEXT', 'IMAGE', 'BOTH']);
+// Mirrors BE Card/domain/model/MainContentType.java (TEXT_ONLY | IMAGE_ONLY | MIXED).
+export const MainContentTypeSchema = z.enum(['TEXT_ONLY', 'IMAGE_ONLY', 'MIXED']);
 export type MainContentType = z.infer<typeof MainContentTypeSchema>;
 
 // FE-facing tag shape used inside Card. Backend returns { id, value, linkedAt } —

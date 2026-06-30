@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/Icon';
 import { MarkdownView } from '@/components/MarkdownView';
 import { useCreateCard } from '@/features/cards/hooks/useCreateCard';
-import { useSelectedDeck } from '@/features/decks/DeckContext';
-import { useDecks } from '@/features/decks/hooks/useDecks';
+import { toastStore } from '@/lib/toast/toastQueue';
+import { CardDestinationPicker, type CardDestination } from './CardDestinationPicker';
 
 type Mode = 'edit' | 'preview';
 
@@ -23,9 +23,7 @@ const AI_DRAFT = (subject: string): string =>
 export function CardEditorPage() {
   const navigate = useNavigate();
   const create = useCreateCard();
-  const { selectedDeckId } = useSelectedDeck();
-  const decks = useDecks();
-  const activeDeckId = selectedDeckId ?? decks.data?.content[0]?.deckId ?? null;
+  const [dest, setDest] = useState<CardDestination>({ axisId: null, deckId: null });
 
   const [subject, setSubject] = useState('');
   const [goal, setGoal] = useState('');
@@ -109,27 +107,34 @@ export function CardEditorPage() {
   };
 
   const ready =
-    subject.trim().length > 0 && note.trim().length > 0 && summary.trim().length > 0;
+    subject.trim().length > 0 &&
+    note.trim().length > 0 &&
+    summary.trim().length > 0 &&
+    !!dest.deckId;
 
   const missing: string[] = [];
   if (!subject.trim()) missing.push('제목');
   if (!note.trim()) missing.push('노트');
   if (!summary.trim()) missing.push('요약');
+  if (!dest.deckId) missing.push('덱');
 
-  const onSave = () => {
-    if (!ready || !activeDeckId) return;
-    create.mutate(
-      {
-        deckId: activeDeckId,
+  const onSave = async () => {
+    if (!ready || create.isPending || !dest.deckId) return;
+    try {
+      await create.mutateAsync({
+        deckId: dest.deckId,
         summary: summary.trim(),
         mainText: note.trim(),
         keywords: keywords.length > 0 ? keywords : [subject.trim()],
         tags: [],
-      },
-      {
-        onSuccess: () => navigate('/home', { replace: true }),
-      },
-    );
+      });
+      navigate('/home', { replace: true });
+    } catch {
+      toastStore.push({
+        message: '카드를 올리지 못했어요. 잠시 후 다시 시도해주세요.',
+        tone: 'amber',
+      });
+    }
   };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -200,13 +205,13 @@ export function CardEditorPage() {
             onClick={onSave}
             disabled={!ready || create.isPending}
             className={`inline-flex items-center gap-2 rounded-full border-0 px-5 py-2.5 text-[13.5px] font-medium transition-all duration-[var(--dur-base)] ease-[var(--ease-spring)] ${
-              ready
+              ready && !create.isPending
                 ? 'bg-amber text-white shadow-[0_10px_24px_-12px_rgba(196,103,63,0.65)] hover:-translate-y-px hover:bg-amber-deep'
                 : 'cursor-not-allowed bg-paper-2 text-cream-faint'
             }`}
           >
             <Icon name="solar:diskette-linear" width={15} height={15} />
-            필드에 올리기
+            {create.isPending ? '올리는 중…' : '필드에 올리기'}
           </button>
         </div>
       </div>
@@ -238,6 +243,10 @@ export function CardEditorPage() {
                 className="min-w-[200px] flex-1 border-0 bg-transparent text-sm text-cream-mute caret-amber outline-none placeholder:text-cream-faint"
               />
               <span className="text-xs tabular-nums text-cream-faint">{today}</span>
+            </div>
+
+            <div className="mt-4 border-t border-edge pt-3.5">
+              <CardDestinationPicker value={dest} onChange={setDest} />
             </div>
           </div>
 

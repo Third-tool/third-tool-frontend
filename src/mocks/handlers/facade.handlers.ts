@@ -278,7 +278,14 @@ export const facadeHandlers = [
   }),
 
   http.get('/api/v1/learning-facade/revision-reason-options', () => {
-    return HttpResponse.json({ options: REVISION_REASONS });
+    // Mirror real BE: a bare array of items keyed by `optionId`.
+    return HttpResponse.json(
+      REVISION_REASONS.map((r) => ({
+        optionId: r.id,
+        label: r.label,
+        displayOrder: r.displayOrder,
+      })),
+    );
   }),
 
   http.patch(

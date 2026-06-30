@@ -12,7 +12,8 @@ export const MaterialTypeSchema = z.enum(['BOOK', 'COURSE', 'AI_CONVERSATION', '
 export type MaterialType = z.infer<typeof MaterialTypeSchema>;
 
 export const TopicSchema = z.object({
-  topicId: z.string(),
+  // BE serializes IDs as Long (JSON number); coerce so z.string() consumers keep working.
+  topicId: z.coerce.string(),
   name: z.string(),
   description: z.string().nullable().optional(),
   displayOrder: z.number().int().nonnegative(),
@@ -24,7 +25,7 @@ export const TopicSchema = z.object({
 export type Topic = z.infer<typeof TopicSchema>;
 
 export const AxisSchema = z.object({
-  axisId: z.string(),
+  axisId: z.coerce.string(),
   name: z.string(),
   displayOrder: z.number().int().nonnegative(),
   topics: z.array(TopicSchema).default([]),
@@ -35,11 +36,12 @@ export type Axis = z.infer<typeof AxisSchema>;
 export const CoverageSummarySchema = z.object({
   totalTopics: z.number().int().nonnegative(),
   uncoveredTopics: z.number().int().nonnegative(),
-  axesWithUncovered: z.array(z.string()),
+  // BE FacadeDetail.CoverageSummary only sends totalTopics/uncoveredTopics.
+  axesWithUncovered: z.array(z.string()).default([]),
 });
 
 export const LearningFacadeSchema = z.object({
-  facadeId: z.string(),
+  facadeId: z.coerce.string(),
   concept: z.string().nullable(),
   axes: z.array(AxisSchema),
   coverageSummary: CoverageSummarySchema,
@@ -54,7 +56,7 @@ export const CreateFacadeRequestSchema = z.object({
 export type CreateFacadeRequest = z.infer<typeof CreateFacadeRequestSchema>;
 
 export const CreateFacadeResponseSchema = z.object({
-  facadeId: z.string(),
+  facadeId: z.coerce.string(),
   concept: z.string(),
   createdAt: z.string().optional(),
 });
@@ -67,7 +69,7 @@ export const UpdateConceptRequestSchema = z.object({
 export type UpdateConceptRequest = z.infer<typeof UpdateConceptRequestSchema>;
 
 export const UpdateConceptResponseSchema = z.object({
-  facadeId: z.string(),
+  facadeId: z.coerce.string(),
   concept: z.string(),
   changed: z.boolean(),
   updatedAt: z.string().optional(),
@@ -75,7 +77,7 @@ export const UpdateConceptResponseSchema = z.object({
 export type UpdateConceptResponse = z.infer<typeof UpdateConceptResponseSchema>;
 
 export const AxisCreateResponseSchema = z.object({
-  axisId: z.string(),
+  axisId: z.coerce.string(),
   name: z.string(),
   displayOrder: z.number().int().nonnegative(),
   isAxisCountExceedsRecommended: z.boolean().optional(),
@@ -91,8 +93,8 @@ export const CreateTopicRequestSchema = z.object({
 export type CreateTopicRequest = z.infer<typeof CreateTopicRequestSchema>;
 
 export const CreateTopicResponseSchema = z.object({
-  topicId: z.string(),
-  axisId: z.string().optional(),
+  topicId: z.coerce.string(),
+  axisId: z.coerce.string().optional(),
   name: z.string(),
   description: z.string().nullable().optional(),
   displayOrder: z.number().int().nonnegative(),
@@ -103,7 +105,7 @@ export const CreateTopicResponseSchema = z.object({
 export type CreateTopicResponse = z.infer<typeof CreateTopicResponseSchema>;
 
 export const MaterialBaseSchema = z.object({
-  materialId: z.string(),
+  materialId: z.coerce.string(),
   type: MaterialTypeSchema,
   name: z.string(),
   proficiencyLevel: ProficiencyLevelSchema,
@@ -127,32 +129,37 @@ export const CreateMaterialRequestSchema = z.object({
 export type CreateMaterialRequest = z.infer<typeof CreateMaterialRequestSchema>;
 
 export const UpdatedTopicCoverageSchema = z.object({
-  topicId: z.string(),
+  topicId: z.coerce.string(),
   coverageStatus: CoverageStatusSchema,
 });
 
 export const CreateMaterialResponseSchema = z.object({
-  materialId: z.string(),
+  materialId: z.coerce.string(),
   name: z.string(),
   materialType: MaterialTypeSchema,
-  linkedTopicIds: z.array(z.string()),
-  deckId: z.string(),
+  linkedTopicIds: z.array(z.coerce.string()),
+  deckId: z.coerce.string(),
   deckAutoCreated: z.boolean(),
   proficiencyLevel: ProficiencyLevelSchema,
   updatedTopicsCoverage: z.array(UpdatedTopicCoverageSchema),
 });
 export type CreateMaterialResponse = z.infer<typeof CreateMaterialResponseSchema>;
 
-export const RevisionReasonSchema = z.object({
-  id: z.number().int().positive(),
-  label: z.string(),
-  displayOrder: z.number().int().nonnegative(),
-});
+// BE GET /revision-reason-options returns a BARE array of items keyed by
+// `optionId` (List<RevisionReasonOptionItem>). Normalize each item to `id` and
+// wrap into { options } so FE consumers keep using `data.options` / `r.id`.
+export const RevisionReasonSchema = z
+  .object({
+    optionId: z.number().int().positive(),
+    label: z.string(),
+    displayOrder: z.number().int().nonnegative(),
+  })
+  .transform((r) => ({ id: r.optionId, label: r.label, displayOrder: r.displayOrder }));
 export type RevisionReason = z.infer<typeof RevisionReasonSchema>;
 
-export const RevisionReasonsResponseSchema = z.object({
-  options: z.array(RevisionReasonSchema),
-});
+export const RevisionReasonsResponseSchema = z
+  .array(RevisionReasonSchema)
+  .transform((options) => ({ options }));
 export type RevisionReasonsResponse = z.infer<typeof RevisionReasonsResponseSchema>;
 
 export const UpdateTopicRequestSchema = z.object({
@@ -163,7 +170,7 @@ export const UpdateTopicRequestSchema = z.object({
 export type UpdateTopicRequest = z.infer<typeof UpdateTopicRequestSchema>;
 
 export const UpdateTopicResponseSchema = z.object({
-  topicId: z.string(),
+  topicId: z.coerce.string(),
   name: z.string(),
   description: z.string().nullable().optional(),
   coverageStatus: CoverageStatusSchema,
@@ -178,7 +185,7 @@ export const RenameAxisRequestSchema = z.object({ name: z.string().min(1) });
 export type RenameAxisRequest = z.infer<typeof RenameAxisRequestSchema>;
 
 export const RenameAxisResponseSchema = z.object({
-  axisId: z.string(),
+  axisId: z.coerce.string(),
   name: z.string(),
   displayOrder: z.number().int().nonnegative(),
 });
@@ -193,7 +200,7 @@ export type ReorderAxesRequest = z.infer<typeof ReorderAxesRequestSchema>;
 export const ReorderAxesResponseSchema = z.object({
   axes: z.array(
     z.object({
-      axisId: z.string(),
+      axisId: z.coerce.string(),
       name: z.string(),
       displayOrder: z.number().int().nonnegative(),
     }),

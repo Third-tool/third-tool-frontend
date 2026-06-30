@@ -34,7 +34,7 @@ beforeEach(() => {
 const detail = (overrides: Partial<{ cardId: number; status: 'ON_FIELD' | 'ARCHIVE'; viewCount: number }> = {}) => ({
   cardId: overrides.cardId ?? 1,
   deckId: 10,
-  mainNote: { textContent: 'hi', imageUrl: null, contentType: 'TEXT' },
+  mainNote: { textContent: 'hi', imageUrl: null, contentType: 'TEXT_ONLY' },
   keywords: [{ id: 100, value: 'k' }],
   summary: 's',
   tags: [{ id: 200, value: 't', linkedAt: '2026-06-11T00:00:00Z' }],
@@ -120,11 +120,11 @@ describe('listArchiveCards', () => {
       data: [
         {
           cardId: 1, keywords: [{ id: 1, value: 'k' }], summary: 'on-field one', tags: [],
-          contentType: 'TEXT', status: 'ON_FIELD', enteredFieldAt: '2026-06-11T00:00:00Z', viewCount: 1, lastViewedAt: null,
+          contentType: 'TEXT_ONLY', status: 'ON_FIELD', enteredFieldAt: '2026-06-11T00:00:00Z', viewCount: 1, lastViewedAt: null,
         },
         {
           cardId: 2, keywords: [{ id: 2, value: 'k' }], summary: 'archived one', tags: [],
-          contentType: 'TEXT', status: 'ARCHIVE', enteredFieldAt: '2026-06-11T00:00:00Z', viewCount: 5, lastViewedAt: null,
+          contentType: 'TEXT_ONLY', status: 'ARCHIVE', enteredFieldAt: '2026-06-11T00:00:00Z', viewCount: 5, lastViewedAt: null,
         },
       ],
     });

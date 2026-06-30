@@ -17,7 +17,7 @@ interface MockCardSummary {
   keywords: Array<{ id: number; value: string }>;
   summary: string;
   tags: Array<{ id: number; value: string; linkedAt: string }>;
-  contentType: 'TEXT';
+  contentType: 'TEXT_ONLY';
   status: 'ON_FIELD' | 'ARCHIVE';
   enteredFieldAt: string;
   viewCount: number;
@@ -40,7 +40,7 @@ function summary(
     summary: s,
     keywords: kw.map((value, i) => ({ id: cardId * 100 + i, value })),
     tags: tagPairs.map((p) => ({ ...p, linkedAt: NOW })),
-    contentType: 'TEXT',
+    contentType: 'TEXT_ONLY',
     status,
     enteredFieldAt: NOW,
     viewCount,
