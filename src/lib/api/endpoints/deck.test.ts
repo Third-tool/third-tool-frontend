@@ -40,7 +40,7 @@ describe('listDecks', () => {
     });
     const page = await listDecks({ page: 0, size: 20 });
     expect(page.content[0]).toMatchObject({ deckId: '7', axisId: '3' });
-    expect(page.content[1].axisId).toBeNull();
+    expect(page.content[1]!.axisId).toBeNull();
   });
 });
 
