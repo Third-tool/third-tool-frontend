@@ -4,9 +4,14 @@ import { Button } from '@/components/Button';
 import { useLayers } from './hooks/useLayers';
 import { LayerCard } from './components/LayerCard';
 import { LayerFormDialog } from './components/LayerFormDialog';
+import { LayerConfirmDeleteDialog } from './components/LayerConfirmDeleteDialog';
 import type { Layer } from '@/lib/api/schemas/layer';
 
-type DialogState = { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; layer: Layer };
+type DialogState =
+  | { mode: 'closed' }
+  | { mode: 'create' }
+  | { mode: 'edit'; layer: Layer }
+  | { mode: 'delete'; layer: Layer };
 
 export function LayersListPage() {
   const layers = useLayers();
@@ -51,6 +56,7 @@ export function LayersListPage() {
                 <LayerCard
                   layer={layer}
                   onEdit={(l) => setDialog({ mode: 'edit', layer: l })}
+                  onDelete={(l) => setDialog({ mode: 'delete', layer: l })}
                 />
               </li>
             ))}
@@ -62,9 +68,14 @@ export function LayersListPage() {
       </div>
 
       <LayerFormDialog
-        open={dialog.mode !== 'closed'}
+        open={dialog.mode === 'create' || dialog.mode === 'edit'}
         onClose={() => setDialog({ mode: 'closed' })}
         layer={dialog.mode === 'edit' ? dialog.layer : undefined}
+      />
+      <LayerConfirmDeleteDialog
+        open={dialog.mode === 'delete'}
+        onClose={() => setDialog({ mode: 'closed' })}
+        layer={dialog.mode === 'delete' ? dialog.layer : null}
       />
     </AppShell>
   );
