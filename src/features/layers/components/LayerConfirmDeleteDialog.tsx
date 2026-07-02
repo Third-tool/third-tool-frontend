@@ -9,11 +9,13 @@ interface Props {
   open: boolean;
   onClose: () => void;
   layer: Layer | null;
+  // 삭제 성공 시에만 호출. 취소·에러엔 부르지 않는다. (LayerDetailPage → /layers navigate 용)
+  onDeleted?: () => void;
 }
 
 const CONFIRM_WORD = '삭제';
 
-export function LayerConfirmDeleteDialog({ open, onClose, layer }: Props) {
+export function LayerConfirmDeleteDialog({ open, onClose, layer, onDeleted }: Props) {
   const [confirmText, setConfirmText] = useState('');
   const [inline, setInline] = useState<string | null>(null);
   const del = useDeleteLayer();
@@ -46,7 +48,13 @@ export function LayerConfirmDeleteDialog({ open, onClose, layer }: Props) {
   const submit = () => {
     if (!canDelete || !layer) return;
     setInline(null);
-    del.mutate(layer.layerId, { onSuccess: onClose, onError: handleError });
+    del.mutate(layer.layerId, {
+      onSuccess: () => {
+        onClose();
+        onDeleted?.();
+      },
+      onError: handleError,
+    });
   };
 
   return (

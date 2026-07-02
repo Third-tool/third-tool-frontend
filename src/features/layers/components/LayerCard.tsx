@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { Layer } from '@/lib/api/schemas/layer';
 
 interface Props {
@@ -18,22 +19,14 @@ export function LayerCard({ layer, onEdit, onDelete }: Props) {
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-edge bg-surface px-4 py-4">
-      {onEdit ? (
-        <button
-          type="button"
-          onClick={() => onEdit(layer)}
-          aria-label={`${layer.name} 편집`}
-          className="flex flex-1 flex-col items-start gap-1 text-left transition-colors hover:opacity-80"
-        >
-          <span className="text-base font-semibold text-cream">{layer.name}</span>
-          {statusText && <span className="text-xs text-cream-faint">{statusText}</span>}
-        </button>
-      ) : (
-        <div className="flex flex-1 flex-col gap-1">
-          <span className="text-base font-semibold text-cream">{layer.name}</span>
-          {statusText && <span className="text-xs text-cream-faint">{statusText}</span>}
-        </div>
-      )}
+      <Link
+        to={`/layers/${layer.layerId}`}
+        aria-label={`${layer.name} 상세 열기`}
+        className="flex flex-1 flex-col items-start gap-1 text-left transition-colors hover:opacity-80"
+      >
+        <span className="text-base font-semibold text-cream">{layer.name}</span>
+        {statusText && <span className="text-xs text-cream-faint">{statusText}</span>}
+      </Link>
 
       <div className="flex items-center gap-2">
         <span
@@ -42,6 +35,16 @@ export function LayerCard({ layer, onEdit, onDelete }: Props) {
         >
           #{layer.displayOrder + 1}
         </span>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(layer)}
+            aria-label={`${layer.name} 편집`}
+            className="rounded-full px-2 py-1 text-xs text-cream-faint transition-colors hover:bg-paper-2 hover:text-cream"
+          >
+            편집
+          </button>
+        )}
         {onDelete && (
           <button
             type="button"
