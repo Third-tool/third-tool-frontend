@@ -148,6 +148,17 @@ export const layerHandlers = [
         { status: 404 },
       );
     }
+    // 기본 "Uncategorized" 는 미분류 축 컨테이너 역할이라 mock 은 항상 활성 축이
+    // 있다고 취급 (BE 는 axis 실제 카운트로 판단).
+    if (layer.name === 'Uncategorized') {
+      return HttpResponse.json(
+        {
+          code: 'LAYER_HAS_ACTIVE_AXES',
+          message: '이 Layer 에 아직 축이 있어요. 축을 다른 Layer 로 옮긴 뒤 다시 시도해주세요.',
+        },
+        { status: 409 },
+      );
+    }
     layer.deletedAt = new Date().toISOString();
     persist();
     return new HttpResponse(null, { status: 204 });
