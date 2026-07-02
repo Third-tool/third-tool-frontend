@@ -1,11 +1,17 @@
+import { useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/Button';
 import { useLayers } from './hooks/useLayers';
 import { LayerCard } from './components/LayerCard';
+import { LayerFormDialog } from './components/LayerFormDialog';
+import type { Layer } from '@/lib/api/schemas/layer';
+
+type DialogState = { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; layer: Layer };
 
 export function LayersListPage() {
   const layers = useLayers();
   const items = layers.data ?? [];
+  const [dialog, setDialog] = useState<DialogState>({ mode: 'closed' });
 
   return (
     <AppShell>
@@ -20,7 +26,12 @@ export function LayersListPage() {
               관점별 축 묶음. 기본 &quot;Uncategorized&quot; 는 삭제할 수 없어요.
             </p>
           </div>
-          <Button variant="primary" type="button" disabled aria-label="Layer 추가">
+          <Button
+            variant="primary"
+            type="button"
+            onClick={() => setDialog({ mode: 'create' })}
+            aria-label="Layer 추가"
+          >
             + Layer 추가
           </Button>
         </header>
@@ -37,7 +48,10 @@ export function LayersListPage() {
           <ul aria-label="Layer 목록" className="flex flex-col gap-3">
             {items.map((layer) => (
               <li key={layer.layerId}>
-                <LayerCard layer={layer} />
+                <LayerCard
+                  layer={layer}
+                  onEdit={(l) => setDialog({ mode: 'edit', layer: l })}
+                />
               </li>
             ))}
             {items.length === 0 && (
@@ -46,6 +60,12 @@ export function LayersListPage() {
           </ul>
         )}
       </div>
+
+      <LayerFormDialog
+        open={dialog.mode !== 'closed'}
+        onClose={() => setDialog({ mode: 'closed' })}
+        layer={dialog.mode === 'edit' ? dialog.layer : undefined}
+      />
     </AppShell>
   );
 }
