@@ -45,9 +45,18 @@ export async function createFacade(concept: string): Promise<CreateFacadeRespons
 }
 
 // Updates the concept of an existing facade.
+// @deprecated FE-M2/FE-5: use `updateConcepts` (accepts array of up to 5).
 export async function updateConcept(concept: string): Promise<UpdateConceptResponse> {
   const validated = UpdateConceptRequestSchema.parse({ concept });
   const { data } = await apiClient.patch('/api/v1/learning-facade/concept', validated);
+  return UpdateConceptResponseSchema.parse(data);
+}
+
+// PATCH /api/v1/learning-facade/concepts { concepts: string[] }
+// BE Epic 1 (LT 1-4): 1..5 concept array. Response also returns array.
+export async function updateConcepts(concepts: string[]): Promise<UpdateConceptResponse> {
+  const validated = UpdateConceptRequestSchema.parse({ concepts });
+  const { data } = await apiClient.patch('/api/v1/learning-facade/concepts', validated);
   return UpdateConceptResponseSchema.parse(data);
 }
 

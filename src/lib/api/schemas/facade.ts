@@ -38,37 +38,44 @@ export const CoverageSummarySchema = z.object({
   axesWithUncovered: z.array(z.string()),
 });
 
+// FE-M2 (BE LT Epic 1, Story 1-1): concepts 배열 신설. concept 단수는 이관 기간 fallback.
+// 도메인 상한(1..5)은 요청 스키마 · 컴포넌트에서 강제. 응답은 이관 유예 위해 .max(5) 만.
 export const LearningFacadeSchema = z.object({
   facadeId: z.string(),
-  concept: z.string().nullable(),
+  concept: z.string().nullable().optional(),
+  concepts: z.array(z.string().min(1).max(100)).max(5).default([]),
   axes: z.array(AxisSchema),
   coverageSummary: CoverageSummarySchema,
   isAxisCountExceedsRecommended: z.boolean().optional(),
 });
 export type LearningFacade = z.infer<typeof LearningFacadeSchema>;
 
-// POST /api/v1/learning-facade { concept } — creates the (unique-per-user) facade
+// POST /api/v1/learning-facade — creates the (unique-per-user) facade.
 export const CreateFacadeRequestSchema = z.object({
-  concept: z.string().min(1),
+  concept: z.string().min(1).optional(),
+  concepts: z.array(z.string().min(1).max(100)).min(1).max(5).optional(),
 });
 export type CreateFacadeRequest = z.infer<typeof CreateFacadeRequestSchema>;
 
 export const CreateFacadeResponseSchema = z.object({
   facadeId: z.string(),
-  concept: z.string(),
+  concept: z.string().optional(),
+  concepts: z.array(z.string().min(1).max(100)).max(5).default([]),
   createdAt: z.string().optional(),
 });
 export type CreateFacadeResponse = z.infer<typeof CreateFacadeResponseSchema>;
 
-// PATCH /api/v1/learning-facade/concept { concept } — updates existing concept
+// PATCH /api/v1/learning-facade/concept | /concepts — updates concepts.
 export const UpdateConceptRequestSchema = z.object({
-  concept: z.string().min(1),
+  concept: z.string().min(1).optional(),
+  concepts: z.array(z.string().min(1).max(100)).min(1).max(5).optional(),
 });
 export type UpdateConceptRequest = z.infer<typeof UpdateConceptRequestSchema>;
 
 export const UpdateConceptResponseSchema = z.object({
   facadeId: z.string(),
-  concept: z.string(),
+  concept: z.string().optional(),
+  concepts: z.array(z.string().min(1).max(100)).max(5).default([]),
   changed: z.boolean(),
   updatedAt: z.string().optional(),
 });
