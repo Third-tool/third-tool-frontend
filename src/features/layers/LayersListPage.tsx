@@ -5,6 +5,7 @@ import { useLayers } from './hooks/useLayers';
 import { LayerCard } from './components/LayerCard';
 import { LayerFormDialog } from './components/LayerFormDialog';
 import { LayerConfirmDeleteDialog } from './components/LayerConfirmDeleteDialog';
+import { LayerReorderList } from './components/LayerReorderList';
 import type { Layer } from '@/lib/api/schemas/layer';
 
 type DialogState =
@@ -17,6 +18,7 @@ export function LayersListPage() {
   const layers = useLayers();
   const items = layers.data ?? [];
   const [dialog, setDialog] = useState<DialogState>({ mode: 'closed' });
+  const [reorderMode, setReorderMode] = useState(false);
 
   return (
     <AppShell>
@@ -31,14 +33,26 @@ export function LayersListPage() {
               관점별 축 묶음. 기본 &quot;Uncategorized&quot; 는 삭제할 수 없어요.
             </p>
           </div>
-          <Button
-            variant="primary"
-            type="button"
-            onClick={() => setDialog({ mode: 'create' })}
-            aria-label="Layer 추가"
-          >
-            + Layer 추가
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => setReorderMode((r) => !r)}
+              aria-pressed={reorderMode}
+              aria-label={reorderMode ? '순서 변경 완료' : '순서 변경 시작'}
+            >
+              {reorderMode ? '완료' : '순서 변경'}
+            </Button>
+            <Button
+              variant="primary"
+              type="button"
+              onClick={() => setDialog({ mode: 'create' })}
+              aria-label="Layer 추가"
+              disabled={reorderMode}
+            >
+              + Layer 추가
+            </Button>
+          </div>
         </header>
 
         {layers.isLoading && (
@@ -50,20 +64,26 @@ export function LayersListPage() {
           </p>
         )}
         {!layers.isLoading && !layers.isError && (
-          <ul aria-label="Layer 목록" className="flex flex-col gap-3">
-            {items.map((layer) => (
-              <li key={layer.layerId}>
-                <LayerCard
-                  layer={layer}
-                  onEdit={(l) => setDialog({ mode: 'edit', layer: l })}
-                  onDelete={(l) => setDialog({ mode: 'delete', layer: l })}
-                />
-              </li>
-            ))}
-            {items.length === 0 && (
-              <li className="text-sm text-cream-faint">아직 레이어가 없어요.</li>
+          <>
+            {reorderMode ? (
+              <LayerReorderList layers={items} />
+            ) : (
+              <ul aria-label="Layer 목록" className="flex flex-col gap-3">
+                {items.map((layer) => (
+                  <li key={layer.layerId}>
+                    <LayerCard
+                      layer={layer}
+                      onEdit={(l) => setDialog({ mode: 'edit', layer: l })}
+                      onDelete={(l) => setDialog({ mode: 'delete', layer: l })}
+                    />
+                  </li>
+                ))}
+                {items.length === 0 && (
+                  <li className="text-sm text-cream-faint">아직 레이어가 없어요.</li>
+                )}
+              </ul>
             )}
-          </ul>
+          </>
         )}
       </div>
 
