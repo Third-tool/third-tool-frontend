@@ -20,6 +20,7 @@ import { DecksPage } from '@/features/decks/DecksPage';
 import { ConceptsEditPage } from '@/features/learning-facade/ConceptsEditPage';
 import { LearningFacadePage } from '@/features/learning-facade/LearningFacadePage';
 import { LayersListPage } from '@/features/layers/LayersListPage';
+import { LayerDetailPage } from '@/features/layers/LayerDetailPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -127,6 +128,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <LayersListPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/layers/:layerId',
+    element: (
+      <ProtectedRoute>
+        <LayerDetailPage />
       </ProtectedRoute>
     ),
   },
