@@ -86,7 +86,8 @@ export function MePage() {
       },
     });
   };
-  const identity = facade.data?.concept ?? '결제·정산 도메인을 스스로 저술할 수 있는 백엔드 엔지니어';
+  const identity =
+    facade.data?.concepts?.[0] ?? '결제·정산 도메인을 스스로 저술할 수 있는 백엔드 엔지니어';
   const archiveCount = archive.data?.length ?? 0;
   const masteredCount = Math.max(0, Math.floor(archiveCount / 2));
   const fieldCount = 47; // demo until backend exposes on-field count
