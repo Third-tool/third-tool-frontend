@@ -21,6 +21,7 @@ import {
   listArchiveCards,
   returnToField,
   createCard,
+  listAxisCards,
 } from './card';
 
 const mockGet = apiClient.get as unknown as ReturnType<typeof vi.fn>;
@@ -132,6 +133,31 @@ describe('listArchiveCards', () => {
     expect(mockGet).toHaveBeenCalledWith('/api/v1/decks/10/cards');
     expect(r).toHaveLength(1);
     expect(r[0]!.summary).toBe('archived one');
+  });
+});
+
+describe('listAxisCards', () => {
+  it('hits the axis-scoped endpoint and adapts summaries', async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        {
+          cardId: 5, keywords: [{ id: 9, value: 'k' }], summary: 'axis card', tags: [],
+          contentType: 'TEXT_ONLY', status: 'ON_FIELD', enteredFieldAt: '2026-06-11T00:00:00Z', viewCount: 0, lastViewedAt: null,
+        },
+      ],
+    });
+    const r = await listAxisCards('3');
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/learning-facade/axes/3/cards', undefined);
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ cardId: '5', summary: 'axis card', status: 'ON_FIELD' });
+  });
+
+  it('passes the status filter when given', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+    await listAxisCards('3', 'ARCHIVE');
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/learning-facade/axes/3/cards', {
+      params: { status: 'ARCHIVE' },
+    });
   });
 });
 

@@ -170,7 +170,7 @@ function toDetail(c: MockCard) {
   };
 }
 
-function toSummary(c: MockCard) {
+export function toSummary(c: MockCard) {
   return {
     cardId: c.cardId,
     keywords: c.keywords,

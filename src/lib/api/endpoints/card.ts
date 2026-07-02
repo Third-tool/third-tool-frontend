@@ -133,6 +133,21 @@ export async function replaceCardKeywords(
   return adaptCardKeywords(raw);
 }
 
+// Cards across every deck linked to a learning axis (FE 002.md Issue 5 / BE A3).
+// Reuses the deck-scoped card-summary shape. `status` optionally narrows to
+// ON_FIELD / ARCHIVE.
+export async function listAxisCards(
+  axisId: string,
+  status?: 'ON_FIELD' | 'ARCHIVE',
+): Promise<Card[]> {
+  const { data } = await apiClient.get(
+    `/api/v1/learning-facade/axes/${axisId}/cards`,
+    status ? { params: { status } } : undefined,
+  );
+  const list = z.array(RawCardSummarySchema).parse(data);
+  return list.map((c) => adaptCardSummary(c));
+}
+
 export async function createCard(payload: CreateCardRequest): Promise<Card> {
   const validated = CreateCardRequestSchema.parse(payload);
   const body = {

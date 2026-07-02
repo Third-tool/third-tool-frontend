@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { getCardMockState } from './card.handlers';
+import { getCardMockState, toSummary as cardSummaryDto } from './card.handlers';
 import { clearPersistedScope, loadPersisted, savePersisted } from '../persistence';
 
 type DeckProgress = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
@@ -224,6 +224,20 @@ export const deckHandlers = [
       },
       { status: 201 },
     );
+  }),
+
+  // Plan ref: FE 002.md Issue 5 / BE A3 — cards across all decks of one axis.
+  http.get('/api/v1/learning-facade/axes/:axisId/cards', ({ params, request }) => {
+    const axisId = Number(params.axisId);
+    const statusFilter = new URL(request.url).searchParams.get('status');
+    const deckIds = new Set(
+      [...state.decks.values()].filter((d) => d.axisId === axisId).map((d) => d.deckId),
+    );
+    const cards = [...getCardMockState().cards.values()]
+      .filter((c) => deckIds.has(c.deckId))
+      .filter((c) => !statusFilter || c.status === statusFilter)
+      .map(cardSummaryDto);
+    return HttpResponse.json(cards);
   }),
 
   http.get('/api/v1/decks/:deckId/sub-decks', ({ params }) => {

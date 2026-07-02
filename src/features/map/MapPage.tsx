@@ -7,6 +7,7 @@ import { track as trackEvent } from '@/lib/analytics/track';
 import { ApiError } from '@/lib/api/client';
 import { toastStore } from '@/lib/toast/toastQueue';
 import type { CoverageStatus } from '@/lib/api/schemas/facade';
+import { AxisCardsPanel } from './components/AxisCardsPanel';
 import { useRenameAxis } from './hooks/useRenameAxis';
 import { useReorderAxes } from './hooks/useReorderAxes';
 import { useDeleteAxis } from './hooks/useDeleteAxis';
@@ -1371,6 +1372,12 @@ function TrackRow({
               노드 추가
             </button>
           )}
+
+          {/* Cards made under this axis — only for persisted axes (real axisId). */}
+          {(() => {
+            const axisId = extractAxisId(t.id);
+            return axisId ? <AxisCardsPanel axisId={axisId} /> : null;
+          })()}
         </div>
       )}
     </div>
