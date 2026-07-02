@@ -31,7 +31,9 @@ interface MockMaterial {
 interface FacadeState {
   facadeId: string;
   exists: boolean;
-  concept: string | null;
+  // BE Epic 1 (LT 1-4) 이후 concepts 배열이 주 저장.
+  // `concept` (단수) 필드는 이관 유예 기간용 deprecated 미러 — 응답에만 concepts[0] 로 노출.
+  concepts: string[];
   axes: MockAxis[];
   materials: MockMaterial[];
   nextAxisId: number;
@@ -44,7 +46,7 @@ function seed(): FacadeState {
   return {
     facadeId: 'facade-1',
     exists: false,
-    concept: null,
+    concepts: [],
     axes: [],
     materials: [],
     nextAxisId: 1,
@@ -54,7 +56,16 @@ function seed(): FacadeState {
   };
 }
 
-const state: FacadeState = loadPersisted<FacadeState>('facade', seed());
+// 이관 유예: 세션 저장소에 남은 옛 shape ({ concept: string | null }) 을 concepts[] 로 승격.
+const state: FacadeState = loadPersisted<FacadeState>('facade', seed(), (raw) => {
+  const partial = (raw ?? {}) as Partial<FacadeState> & { concept?: string | null };
+  const concepts = Array.isArray(partial.concepts)
+    ? partial.concepts.filter((v): v is string => typeof v === 'string' && v.length > 0)
+    : partial.concept
+      ? [partial.concept]
+      : [];
+  return { ...seed(), ...partial, concepts };
+});
 
 function persist(): void {
   savePersisted('facade', state);
@@ -63,6 +74,10 @@ function persist(): void {
 export function resetFacadeMockState(): void {
   Object.assign(state, seed());
   clearPersistedScope('facade');
+}
+
+function mirrorConcept(): string | null {
+  return state.concepts[0] ?? null;
 }
 
 const REVISION_REASONS = [
@@ -114,7 +129,8 @@ export const facadeHandlers = [
     }
     return HttpResponse.json({
       facadeId: state.facadeId,
-      concept: state.concept,
+      concept: mirrorConcept(),
+      concepts: state.concepts,
       axes: state.axes.map((a) => ({
         axisId: a.axisId,
         name: a.name,
@@ -135,12 +151,28 @@ export const facadeHandlers = [
   }),
 
   http.post('/api/v1/learning-facade', async ({ request }) => {
-    const body = (await request.json().catch(() => ({}))) as { concept?: string };
-    const trimmed = body.concept?.trim();
-    if (!trimmed) {
+    const body = (await request.json().catch(() => ({}))) as {
+      concept?: string;
+      concepts?: unknown;
+    };
+    const fromArray = Array.isArray(body.concepts)
+      ? body.concepts
+          .filter((v): v is string => typeof v === 'string')
+          .map((v) => v.trim())
+          .filter((v) => v.length > 0)
+      : [];
+    const fromSingle = body.concept?.trim();
+    const normalized = fromArray.length > 0 ? fromArray : fromSingle ? [fromSingle] : [];
+    if (normalized.length === 0 || normalized.length > 5) {
       return HttpResponse.json(
         { code: 'C001', message: '잘못된 입력 값입니다.' },
         { status: 400 },
+      );
+    }
+    if (new Set(normalized).size !== normalized.length) {
+      return HttpResponse.json(
+        { code: 'LEARNING_FACADE_CONCEPT_DUPLICATE', message: '중복된 컨셉이 있어요' },
+        { status: 409 },
       );
     }
     if (state.exists) {
@@ -150,18 +182,20 @@ export const facadeHandlers = [
       );
     }
     state.exists = true;
-    state.concept = trimmed;
+    state.concepts = normalized;
     persist();
     return HttpResponse.json(
       {
         facadeId: state.facadeId,
-        concept: trimmed,
+        concept: mirrorConcept(),
+        concepts: state.concepts,
         createdAt: new Date().toISOString(),
       },
       { status: 201 },
     );
   }),
 
+  // @deprecated FE-M2 PR4: 이관 유예용. 단수 payload 를 concepts[0] 로 승격 처리.
   http.patch('/api/v1/learning-facade/concept', async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { concept?: string };
     const trimmed = body.concept?.trim();
@@ -177,12 +211,58 @@ export const facadeHandlers = [
         { status: 404 },
       );
     }
-    const changed = state.concept !== trimmed;
-    state.concept = trimmed;
+    const changed = state.concepts[0] !== trimmed;
+    state.concepts = [trimmed];
     persist();
     return HttpResponse.json({
       facadeId: state.facadeId,
-      concept: trimmed,
+      concept: mirrorConcept(),
+      concepts: state.concepts,
+      changed,
+      updatedAt: new Date().toISOString(),
+    });
+  }),
+
+  // FE-M2 PR2: BE LT 1-4 대응 — concepts 배열 PATCH.
+  http.patch('/api/v1/learning-facade/concepts', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { concepts?: unknown };
+    if (!Array.isArray(body.concepts)) {
+      return HttpResponse.json(
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { status: 400 },
+      );
+    }
+    const normalized = body.concepts
+      .filter((v): v is string => typeof v === 'string')
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0);
+    if (normalized.length === 0 || normalized.length > 5) {
+      return HttpResponse.json(
+        { code: 'LEARNING_FACADE_CONCEPT_COUNT_INVALID', message: '컨셉은 1~5개여야 해요' },
+        { status: 400 },
+      );
+    }
+    if (new Set(normalized).size !== normalized.length) {
+      return HttpResponse.json(
+        { code: 'LEARNING_FACADE_CONCEPT_DUPLICATE', message: '중복된 컨셉이 있어요' },
+        { status: 409 },
+      );
+    }
+    if (!state.exists) {
+      return HttpResponse.json(
+        { code: 'LF001', message: '학습 Facade를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    const previousFirst = state.concepts[0] ?? null;
+    const changed =
+      previousFirst !== normalized[0] || state.concepts.length !== normalized.length;
+    state.concepts = normalized;
+    persist();
+    return HttpResponse.json({
+      facadeId: state.facadeId,
+      concept: mirrorConcept(),
+      concepts: state.concepts,
       changed,
       updatedAt: new Date().toISOString(),
     });

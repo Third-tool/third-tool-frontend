@@ -57,7 +57,7 @@ export function ProtectedRoute({ children, requireConcept = false, redirectIfCon
 
   if (redirectIfConcept) {
     if (facade.isLoading || facade.isFetching) return <FullPageLoader />;
-    if (!facade.isError && facade.data?.concept) {
+    if (!facade.isError && (facade.data?.concepts?.length ?? 0) > 0) {
       return <Navigate to={redirectIfConcept} replace />;
     }
   }
@@ -78,7 +78,7 @@ export function ProtectedRoute({ children, requireConcept = false, redirectIfCon
         />
       );
     }
-    if (!facade.data?.concept) {
+    if ((facade.data?.concepts?.length ?? 0) === 0) {
       return <Navigate to="/onboarding" replace />;
     }
   }

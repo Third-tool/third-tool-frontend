@@ -81,7 +81,7 @@ export function BootstrapGate() {
       else outcome = 'error';
       requestId = extractRequestId(facade.error);
     } else if (facade.isSuccess) {
-      outcome = facade.data?.concept ? 'home' : 'onboarding';
+      outcome = (facade.data?.concepts?.length ?? 0) > 0 ? 'home' : 'onboarding';
     }
   }
   if (outcome === 'pending' && tier === 'timeout') {

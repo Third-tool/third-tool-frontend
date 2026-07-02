@@ -17,6 +17,9 @@ import { MapPage } from '@/features/map/MapPage';
 import { TagsListPage } from '@/features/tags/TagsListPage';
 import { TagDetailPage } from '@/features/tags/TagDetailPage';
 import { DecksPage } from '@/features/decks/DecksPage';
+import { ConceptsEditPage } from '@/features/learning-facade/ConceptsEditPage';
+import { LearningFacadePage } from '@/features/learning-facade/LearningFacadePage';
+import { LayersListPage } from '@/features/layers/LayersListPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -108,6 +111,30 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute requireConcept>
         <TagDetailPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/learning-facade',
+    element: (
+      <ProtectedRoute>
+        <LearningFacadePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/layers',
+    element: (
+      <ProtectedRoute>
+        <LayersListPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/learning-facade/concepts',
+    element: (
+      <ProtectedRoute>
+        <ConceptsEditPage />
       </ProtectedRoute>
     ),
   },

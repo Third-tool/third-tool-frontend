@@ -151,7 +151,8 @@ export function MapPage() {
     } else {
       setGroups([{ id: 'g-core', name: '내 영역', trackIds: [] }]);
     }
-    if (facade.data.concept) setIdentity(facade.data.concept);
+    const primaryConcept = facade.data.concepts?.[0];
+    if (primaryConcept) setIdentity(primaryConcept);
   }, [facade.data]);
 
   const log = (text: string, icon: string, tone: Change['tone']) => {

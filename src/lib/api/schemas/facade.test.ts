@@ -50,13 +50,23 @@ describe('TopicSchema', () => {
 });
 
 describe('LearningFacadeSchema', () => {
-  it('parses tree with coverage summary', () => {
+  it('parses tree with concepts array and coverage summary', () => {
     const f = LearningFacadeSchema.parse({
       facadeId: 'f1',
-      concept: '백엔드 개발자',
+      concepts: ['백엔드 개발자'],
       axes: [],
       coverageSummary: { totalTopics: 0, uncoveredTopics: 0, axesWithUncovered: [] },
     });
-    expect(f.concept).toBe('백엔드 개발자');
+    expect(f.concepts).toEqual(['백엔드 개발자']);
+  });
+
+  it('accepts a facade with an empty concepts array', () => {
+    const f = LearningFacadeSchema.parse({
+      facadeId: 'f1',
+      concepts: [],
+      axes: [],
+      coverageSummary: { totalTopics: 0, uncoveredTopics: 0, axesWithUncovered: [] },
+    });
+    expect(f.concepts).toEqual([]);
   });
 });
