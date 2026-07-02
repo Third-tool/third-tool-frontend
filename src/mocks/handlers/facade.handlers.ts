@@ -115,6 +115,7 @@ export const facadeHandlers = [
     return HttpResponse.json({
       facadeId: state.facadeId,
       concept: state.concept,
+      concepts: state.concept ? [state.concept] : [],
       axes: state.axes.map((a) => ({
         axisId: a.axisId,
         name: a.name,
@@ -156,6 +157,7 @@ export const facadeHandlers = [
       {
         facadeId: state.facadeId,
         concept: trimmed,
+        concepts: [trimmed],
         createdAt: new Date().toISOString(),
       },
       { status: 201 },
@@ -183,6 +185,51 @@ export const facadeHandlers = [
     return HttpResponse.json({
       facadeId: state.facadeId,
       concept: trimmed,
+      concepts: [trimmed],
+      changed,
+      updatedAt: new Date().toISOString(),
+    });
+  }),
+
+  // FE-M2 PR2: BE LT 1-4 대응 — concepts 배열 PATCH.
+  http.patch('/api/v1/learning-facade/concepts', async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { concepts?: unknown };
+    if (!Array.isArray(body.concepts)) {
+      return HttpResponse.json(
+        { code: 'C001', message: '잘못된 입력 값입니다.' },
+        { status: 400 },
+      );
+    }
+    const normalized = body.concepts
+      .filter((v): v is string => typeof v === 'string')
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0);
+    if (normalized.length === 0 || normalized.length > 5) {
+      return HttpResponse.json(
+        { code: 'LEARNING_FACADE_CONCEPT_COUNT_INVALID', message: '컨셉은 1~5개여야 해요' },
+        { status: 400 },
+      );
+    }
+    if (new Set(normalized).size !== normalized.length) {
+      return HttpResponse.json(
+        { code: 'LEARNING_FACADE_CONCEPT_DUPLICATE', message: '중복된 컨셉이 있어요' },
+        { status: 409 },
+      );
+    }
+    if (!state.exists) {
+      return HttpResponse.json(
+        { code: 'LF001', message: '학습 Facade를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
+    }
+    const previousFirst = state.concept;
+    const changed = previousFirst !== normalized[0];
+    state.concept = normalized[0] ?? null;
+    persist();
+    return HttpResponse.json({
+      facadeId: state.facadeId,
+      concept: state.concept,
+      concepts: normalized,
       changed,
       updatedAt: new Date().toISOString(),
     });
