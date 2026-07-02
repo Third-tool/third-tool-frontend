@@ -5,6 +5,8 @@ import { tagHandlers } from './tag.handlers';
 import { deckHandlers } from './deck.handlers';
 import { reviewHandlers } from './review.handlers';
 import { scheduleHandlers } from './schedule.handlers';
+import { layerHandlers } from './layer.handlers';
+import { suggestionHandlers } from './suggestion.handlers';
 
 export const handlers = [
   ...authHandlers,
@@ -14,4 +16,6 @@ export const handlers = [
   ...deckHandlers,
   ...reviewHandlers,
   ...scheduleHandlers,
+  ...layerHandlers,
+  ...suggestionHandlers,
 ];
