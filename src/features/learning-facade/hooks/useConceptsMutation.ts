@@ -18,7 +18,6 @@ export function useConceptsMutation() {
         qc.setQueryData<LearningFacade>(LEARNING_FACADE_KEY, {
           ...previous,
           concepts,
-          concept: concepts[0] ?? previous.concept ?? null,
         });
       }
       return { previous };

@@ -53,7 +53,7 @@ describe('BootstrapGate', () => {
       http.get('/api/v1/learning-facade', () =>
         HttpResponse.json({
           facadeId: 'f',
-          concept: null,
+          concepts: [],
           axes: [],
           coverageSummary: { totalTopics: 0, uncoveredTopics: 0, axesWithUncovered: [] },
         }),
@@ -71,7 +71,7 @@ describe('BootstrapGate', () => {
       http.get('/api/v1/learning-facade', () =>
         HttpResponse.json({
           facadeId: 'f',
-          concept: '시스템 설계',
+          concepts: ['시스템 설계'],
           axes: [],
           coverageSummary: { totalTopics: 0, uncoveredTopics: 0, axesWithUncovered: [] },
         }),

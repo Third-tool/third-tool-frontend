@@ -52,7 +52,7 @@ export function HomePage() {
 
   const axisCount = facade.data?.axes.length ?? 0;
   const topicCount = facade.data?.coverageSummary.totalTopics ?? 0;
-  const concept = facade.data?.concept ?? '학습 지도';
+  const concept = facade.data?.concepts?.[0] ?? '학습 지도';
 
   const sidebarContext = (
     <div className="flex flex-col gap-2.5">
