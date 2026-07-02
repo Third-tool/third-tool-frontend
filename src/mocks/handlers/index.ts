@@ -7,6 +7,7 @@ import { reviewHandlers } from './review.handlers';
 import { scheduleHandlers } from './schedule.handlers';
 import { layerHandlers } from './layer.handlers';
 import { suggestionHandlers } from './suggestion.handlers';
+import { axisRoadmapNodeHandlers } from './axisRoadmapNode.handlers';
 
 export const handlers = [
   ...authHandlers,
@@ -18,4 +19,5 @@ export const handlers = [
   ...scheduleHandlers,
   ...layerHandlers,
   ...suggestionHandlers,
+  ...axisRoadmapNodeHandlers,
 ];
