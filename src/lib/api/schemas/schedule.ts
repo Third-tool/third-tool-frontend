@@ -1,9 +1,15 @@
 import { z } from 'zod';
+import {
+  LearningModeSchema,
+  type LearningMode,
+} from './learningMode';
 
-// UserSchedule BC modes — BE picks one based on rawInputDays.
-// 1~14 → MODE_10D, 15~24 → MODE_20D, 25+ → MODE_30D.
-export const ScheduleModeSchema = z.enum(['MODE_10D', 'MODE_20D', 'MODE_30D']);
-export type ScheduleMode = z.infer<typeof ScheduleModeSchema>;
+// UserSchedule BC modes.
+// M4 재편(2026-07-15+): 4옵션 (MODE_7D/14D/28D/60D · product-card Epic 1).
+// 1~7 → MODE_7D · 8~14 → MODE_14D · 15~28 → MODE_28D · 29~60 → MODE_60D · 60+ clamp
+// Source of truth: `learningMode.ts`. 하위 호환 위해 `ScheduleMode` 별칭 유지.
+export const ScheduleModeSchema = LearningModeSchema;
+export type ScheduleMode = LearningMode;
 
 export const ScheduleSchema = z.object({
   rawInputDays: z.number().int().positive(),

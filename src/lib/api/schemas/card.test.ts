@@ -61,10 +61,11 @@ describe('ViewCardResponseSchema', () => {
 describe('ScheduleConfigSchema', () => {
   it('parses scheduleMode and soft intervals', () => {
     const s = ScheduleConfigSchema.parse({
-      scheduleMode: 'TEN_DAYS',
-      maxDurationInput: 10,
+      // M4 재편(2026-07-15+): TEN_DAYS → MODE_7D · product-card Epic 1.
+      scheduleMode: 'MODE_7D',
+      maxDurationInput: 7,
       softScheduleIntervals: [1, 3, 7],
-      maxView: 5,
+      maxView: 3,
     });
     expect(s.softScheduleIntervals).toEqual([1, 3, 7]);
   });

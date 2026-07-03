@@ -46,11 +46,15 @@ export const ViewCardResponseSchema = z.object({
 });
 export type ViewCardResponse = z.infer<typeof ViewCardResponseSchema>;
 
-export const ScheduleModeSchema = z.enum(['TEN_DAYS', 'TWENTY_DAYS', 'THIRTY_DAYS']);
-export type ScheduleMode = z.infer<typeof ScheduleModeSchema>;
+// M4 재편(2026-07-15+): 4옵션 (MODE_7D/14D/28D/60D · product-card Epic 1).
+// 기존 3옵션 (TEN_DAYS/TWENTY_DAYS/THIRTY_DAYS) SUPERSEDED · learningMode.ts SoT 사용.
+export { LearningModeSchema as ScheduleModeSchema } from './learningMode';
+export type { LearningMode as ScheduleMode } from './learningMode';
+
+import { LearningModeSchema } from './learningMode';
 
 export const ScheduleConfigSchema = z.object({
-  scheduleMode: ScheduleModeSchema,
+  scheduleMode: LearningModeSchema,
   maxDurationInput: z.number().int().positive(),
   softScheduleIntervals: z.array(z.number().int().positive()),
   maxView: z.number().int().positive(),

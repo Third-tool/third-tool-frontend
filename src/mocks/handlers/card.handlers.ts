@@ -137,14 +137,15 @@ function daysToState(days: number): SoftScheduleState {
     case 3: return 'INTERVAL_3D';
     case 7: return 'INTERVAL_7D';
     case 14: return 'INTERVAL_14D';
-    // BE enum tops out at INTERVAL_21D; MODE_30D's 30-day cadence collapses here.
+    // BE enum tops out at INTERVAL_21D; longer cadences (28d, 60d in MODE_28D/60D) collapse here.
     default: return 'INTERVAL_21D';
   }
 }
 
-// Reads the user's current schedule (MODE_10D/20D/30D) and maps viewCount to
-// the position in softScheduleIntervals — so MODE_10D ([1,3,7]) tops out at
-// INTERVAL_7D after 3 reviews, while MODE_30D ([1,3,7,14,30]) keeps climbing.
+// M4 재편(2026-07-15+): LearningMode 4옵션 (MODE_7D/14D/28D/60D · product-card Epic 1).
+// Reads the user's current schedule and maps viewCount to the position in
+// softScheduleIntervals — so MODE_7D ([1,3,7]) tops out at INTERVAL_7D after
+// 3 reviews, while MODE_60D ([1,3,7,14,28,60]) keeps climbing.
 function stateForViewCount(viewCount: number): SoftScheduleState {
   if (viewCount <= 0) return 'FRESH';
   const intervals = getScheduleMockState().schedule.softScheduleIntervals;
