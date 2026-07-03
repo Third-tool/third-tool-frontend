@@ -6,25 +6,42 @@ import { useMySchedule } from '../hooks/useMySchedule';
 import { useSetSchedule } from '../hooks/useSetSchedule';
 import { useUpdateDailyTarget } from '../hooks/useUpdateDailyTarget';
 import type { ScheduleMode } from '@/lib/api/schemas/schedule';
+import { SCHEDULE_MODE_META, modeFromDays } from '../modeMeta';
 
+// M4 재편(2026-07-15+): 4옵션 (MODE_7D/14D/28D/60D · product-card Epic 1).
+// SoT는 learningMode.ts · 재export된 SCHEDULE_MODE_META를 UX 편의 alias로 사용.
 const MODE_DEFAULTS: Record<
   ScheduleMode,
   { label: string; range: string; intervals: number[]; maxView: number }
 > = {
-  MODE_10D: { label: '단기 학습 모드', range: '1~14일', intervals: [1, 3, 7], maxView: 3 },
-  MODE_20D: { label: '중기 학습 모드', range: '15~24일', intervals: [1, 3, 7, 14], maxView: 5 },
-  MODE_30D: {
-    label: '장기 학습 모드',
-    range: '25일+',
-    intervals: [1, 3, 7, 14, 30],
-    maxView: 7,
+  MODE_7D: {
+    label: SCHEDULE_MODE_META.MODE_7D.label,
+    range: SCHEDULE_MODE_META.MODE_7D.rangeLabel,
+    intervals: SCHEDULE_MODE_META.MODE_7D.intervals,
+    maxView: SCHEDULE_MODE_META.MODE_7D.maxView,
+  },
+  MODE_14D: {
+    label: SCHEDULE_MODE_META.MODE_14D.label,
+    range: SCHEDULE_MODE_META.MODE_14D.rangeLabel,
+    intervals: SCHEDULE_MODE_META.MODE_14D.intervals,
+    maxView: SCHEDULE_MODE_META.MODE_14D.maxView,
+  },
+  MODE_28D: {
+    label: SCHEDULE_MODE_META.MODE_28D.label,
+    range: SCHEDULE_MODE_META.MODE_28D.rangeLabel,
+    intervals: SCHEDULE_MODE_META.MODE_28D.intervals,
+    maxView: SCHEDULE_MODE_META.MODE_28D.maxView,
+  },
+  MODE_60D: {
+    label: SCHEDULE_MODE_META.MODE_60D.label,
+    range: SCHEDULE_MODE_META.MODE_60D.rangeLabel,
+    intervals: SCHEDULE_MODE_META.MODE_60D.intervals,
+    maxView: SCHEDULE_MODE_META.MODE_60D.maxView,
   },
 };
 
 function previewMode(days: number): ScheduleMode {
-  if (days <= 14) return 'MODE_10D';
-  if (days <= 24) return 'MODE_20D';
-  return 'MODE_30D';
+  return modeFromDays(days);
 }
 
 const DAYS_MIN = 1;

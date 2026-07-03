@@ -1,7 +1,9 @@
 import { http, HttpResponse } from 'msw';
 import { clearPersistedScope, loadPersisted, savePersisted } from '../persistence';
 
-type Mode = 'MODE_10D' | 'MODE_20D' | 'MODE_30D';
+// M4 재편(2026-07-15+): LearningMode 4옵션 (MODE_7D/14D/28D/60D · product-card Epic 1).
+// 기존 3옵션 (MODE_10D/20D/30D) SUPERSEDED · learningMode.ts 정책 스냅샷 미러링.
+type Mode = 'MODE_7D' | 'MODE_14D' | 'MODE_28D' | 'MODE_60D';
 
 interface MockSchedule {
   rawInputDays: number;
@@ -22,26 +24,31 @@ interface MockHistoryEntry {
 }
 
 const MODE_DEFAULTS: Record<Mode, { maxView: number; intervals: number[]; label: string }> = {
-  MODE_10D: { maxView: 3, intervals: [1, 3, 7], label: '단기 학습 모드' },
-  MODE_20D: { maxView: 5, intervals: [1, 3, 7, 14], label: '중기 학습 모드' },
-  MODE_30D: { maxView: 7, intervals: [1, 3, 7, 14, 30], label: '장기 학습 모드' },
+  MODE_7D: { maxView: 3, intervals: [1, 3, 7], label: '집중 학습 모드' },
+  MODE_14D: { maxView: 4, intervals: [1, 3, 7, 14], label: '단기 학습 모드' },
+  MODE_28D: { maxView: 5, intervals: [1, 3, 7, 14, 28], label: '중기 학습 모드' },
+  MODE_60D: { maxView: 6, intervals: [1, 3, 7, 14, 28, 60], label: '장기 학습 모드' },
 };
 
+const RAW_INPUT_DAYS_CAP = 60;
+
 function mapMode(inputDays: number): Mode {
-  if (inputDays <= 14) return 'MODE_10D';
-  if (inputDays <= 24) return 'MODE_20D';
-  return 'MODE_30D';
+  if (inputDays <= 7) return 'MODE_7D';
+  if (inputDays <= 14) return 'MODE_14D';
+  if (inputDays <= 28) return 'MODE_28D';
+  return 'MODE_60D';
 }
 
 function buildSchedule(inputDays: number, dailyTarget: number): MockSchedule {
-  const mode = mapMode(inputDays);
+  const clampedDays = Math.min(inputDays, RAW_INPUT_DAYS_CAP);
+  const mode = mapMode(clampedDays);
   const defaults = MODE_DEFAULTS[mode];
   return {
-    rawInputDays: inputDays,
+    rawInputDays: clampedDays,
     mappedMode: mode,
     modeDisplayName: defaults.label,
     maxView: defaults.maxView,
-    maxDuration: inputDays,
+    maxDuration: clampedDays,
     dailyTarget,
     softScheduleIntervals: defaults.intervals,
   };
@@ -111,6 +118,8 @@ export const scheduleHandlers = [
         { status: 400 },
       );
     }
+    // M4 Story 1-5: raw_input_days > 60 시 MODE_60D_CLAMPED 정보성 안내.
+    const wasClamped = inputDays > RAW_INPUT_DAYS_CAP;
     const prevMode = state.exists ? state.schedule.mappedMode : null;
     const nextSchedule = buildSchedule(inputDays, state.schedule.dailyTarget);
     state.exists = true;
@@ -121,7 +130,7 @@ export const scheduleHandlers = [
         historyId: `history-${state.nextHistoryId++}`,
         fromMode: prevMode,
         toMode: nextSchedule.mappedMode,
-        rawInputDays: inputDays,
+        rawInputDays: nextSchedule.rawInputDays,
         changedAt: state.updatedAt,
       });
     }
@@ -131,7 +140,9 @@ export const scheduleHandlers = [
         mappingGuide: {
           fromMode: prevMode,
           toMode: nextSchedule.mappedMode,
-          message: `${inputDays}일 → ${nextSchedule.modeDisplayName}`,
+          message: wasClamped
+            ? `${inputDays}일은 최대 ${RAW_INPUT_DAYS_CAP}일까지 지원돼요. ${nextSchedule.modeDisplayName}(${nextSchedule.rawInputDays}일)로 저장됐어요.`
+            : `${inputDays}일 → ${nextSchedule.modeDisplayName}`,
         },
       }),
     );
