@@ -21,6 +21,7 @@ import { ConceptsEditPage } from '@/features/learning-facade/ConceptsEditPage';
 import { LearningFacadePage } from '@/features/learning-facade/LearningFacadePage';
 import { LayersListPage } from '@/features/layers/LayersListPage';
 import { LayerDetailPage } from '@/features/layers/LayerDetailPage';
+import { AxisDetailPage } from '@/features/axes/AxisDetailPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -136,6 +137,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <LayerDetailPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/axes/:axisId',
+    element: (
+      <ProtectedRoute>
+        <AxisDetailPage />
       </ProtectedRoute>
     ),
   },
