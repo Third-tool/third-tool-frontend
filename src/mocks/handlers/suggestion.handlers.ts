@@ -5,6 +5,8 @@ import { http, HttpResponse } from 'msw';
 // `suggestionsAvailable=true` · `providerContext="stub"` 로 dev only 표시.
 // 6-Port 후반 4개 (chaptersOutline/chapterSubtree/selectionOutline/selectionSubtree)는
 // BE Static Adapter (backend-developer role catalog) 응답 형태 mock.
+//
+// M4 FE PR#5 (2026-07-15+): 4-Port (Roadmap/Selections) SUPERSEDED 물리 삭제 완료.
 
 const STUB_PROVIDER = 'stub';
 const STATIC_ADAPTER = 'static:backend-developer';
@@ -32,28 +34,7 @@ export const suggestionHandlers = [
     });
   }),
 
-  http.post('/api/v1/suggestions/roadmaps', async () => {
-    return HttpResponse.json({
-      // ADR023: roadmap = 축의 "헌법". 여기서 '초안' 은 AI 제안 상태(미저장)를
-      // 뜻하며 도메인 어휘와 무관 — "헌법" 어휘를 병기해 사용자 오해를 차단.
-      roadmapDraft: '# 축 헌법 초안 (AI 제안)\n\n주제 A → 주제 B → 주제 C',
-      suggestionsAvailable: true,
-      providerContext: STUB_PROVIDER,
-    });
-  }),
-
-  http.post('/api/v1/suggestions/selections', async () => {
-    return HttpResponse.json({
-      selections: [
-        { name: '사례 A', content: '실무 적용 요약' },
-        { name: '사례 B', content: '반대 사례 요약' },
-      ],
-      suggestionsAvailable: true,
-      providerContext: STUB_PROVIDER,
-    });
-  }),
-
-  // ── 6-Port 후반 4종 (2026-07-02 pivot) ─────────────────────
+  // ── 6-Port 후반 4종 (2026-07-02 pivot · M4 4-Port 대체) ────
   // BE Static Adapter (backend-developer role catalog) 응답 형태 재현.
 
   http.post('/api/v1/suggestions/chapters-outline', async () => {
