@@ -7,6 +7,10 @@ import { useSetSchedule } from '../hooks/useSetSchedule';
 import { useUpdateDailyTarget } from '../hooks/useUpdateDailyTarget';
 import type { ScheduleMode } from '@/lib/api/schemas/schedule';
 import { SCHEDULE_MODE_META, modeFromDays } from '../modeMeta';
+import {
+  ModeChangeConfirmDialog,
+  isModeDowngrade,
+} from './ModeChangeConfirmDialog';
 
 // M4 재편(2026-07-15+): 4옵션 (MODE_7D/14D/28D/60D · product-card Epic 1).
 // SoT는 learningMode.ts · 재export된 SCHEDULE_MODE_META를 UX 편의 alias로 사용.
@@ -58,6 +62,8 @@ export function ScheduleSection() {
   const [targetDraft, setTargetDraft] = useState<number>(10);
   const [daysError, setDaysError] = useState<string | null>(null);
   const [targetError, setTargetError] = useState<string | null>(null);
+  // M4 Epic 3 Story 3-1: mode down 감지 시 확인 게이트.
+  const [modeDownDialogOpen, setModeDownDialogOpen] = useState(false);
 
   useEffect(() => {
     if (schedule.data) {
@@ -80,20 +86,31 @@ export function ScheduleSection() {
   const clampTarget = (v: number) =>
     Math.max(TARGET_MIN, Math.min(TARGET_MAX, Math.round(v) || TARGET_MIN));
 
-  const onSaveDays = () => {
-    setDaysError(null);
-    if (!daysChanged) return;
+  const commitSaveDays = () => {
     setSched.mutate(daysDraft, {
       onSuccess: (res) => {
+        setModeDownDialogOpen(false);
         toastStore.push({
           message: `학습 모드가 ${res.schedule.modeDisplayName}(으)로 설정됐어요.`,
           tone: 'amber',
         });
       },
       onError: (err) => {
+        setModeDownDialogOpen(false);
         setDaysError(err instanceof ApiError ? err.message : '저장에 실패했어요.');
       },
     });
+  };
+
+  const onSaveDays = () => {
+    setDaysError(null);
+    if (!daysChanged) return;
+    // M4 Epic 3 Story 3-1: 다운그레이드 시 <ModeChangeConfirmDialog> 게이트.
+    if (current && isModeDowngrade(current.mappedMode, previewModeKey)) {
+      setModeDownDialogOpen(true);
+      return;
+    }
+    commitSaveDays();
   };
 
   const onSaveTarget = () => {
@@ -263,6 +280,16 @@ export function ScheduleSection() {
             </div>
           </div>
         </>
+      )}
+      {current && (
+        <ModeChangeConfirmDialog
+          open={modeDownDialogOpen}
+          onClose={() => setModeDownDialogOpen(false)}
+          onConfirm={commitSaveDays}
+          fromMode={current.mappedMode}
+          toMode={previewModeKey}
+          isPending={setSched.isPending}
+        />
       )}
     </div>
   );

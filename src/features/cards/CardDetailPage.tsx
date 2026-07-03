@@ -19,6 +19,8 @@ import { useDeleteCard } from './hooks/useDeleteCard';
 import { CardScheduleBadge } from './components/CardScheduleBadge';
 import { ArchiveReasonBadge } from './components/ArchiveReasonBadge';
 import { UpcomingExposureIndicator } from './components/UpcomingExposureIndicator';
+import { ReturnToFieldConfirmDialog } from './components/ReturnToFieldConfirmDialog';
+import { useMySchedule } from '@/features/schedule/hooks/useMySchedule';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -51,6 +53,9 @@ export function CardDetailPage() {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // M4 Epic 3 Story 3-2: 필드 복귀 확인 게이트.
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const schedule = useMySchedule();
   const summaryRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -207,9 +212,24 @@ export function CardDetailPage() {
     });
   };
 
-  const handleReturn = () => {
+  const openReturnDialog = () => {
     if (!card) return;
-    ret.mutate(card.cardId, { onSuccess: () => navigate('/home') });
+    setReturnDialogOpen(true);
+  };
+
+  const commitReturn = () => {
+    if (!card) return;
+    ret.mutate(card.cardId, {
+      onSuccess: () => {
+        setReturnDialogOpen(false);
+        navigate('/home');
+      },
+      onError: (err) => {
+        setReturnDialogOpen(false);
+        const msg = err instanceof ApiError ? err.message : '되돌리기에 실패했어요.';
+        toastStore.push({ message: msg, tone: 'amber' });
+      },
+    });
   };
 
   const performDelete = () => {
@@ -455,7 +475,7 @@ export function CardDetailPage() {
                 {card.status === 'ARCHIVE' && (
                   <button
                     type="button"
-                    onClick={handleReturn}
+                    onClick={openReturnDialog}
                     disabled={ret.isPending}
                     className="group inline-flex items-center gap-3 rounded-full bg-amber py-3 pl-6 pr-4 text-[14px] font-medium text-white shadow-[0_10px_24px_-12px_rgba(196,103,63,0.65)] transition-all duration-[var(--dur-base)] ease-[var(--ease-spring)] hover:-translate-y-px hover:bg-amber-deep disabled:opacity-50"
                   >
@@ -525,6 +545,17 @@ export function CardDetailPage() {
           </p>
         )}
       </Dialog>
+
+      {card && schedule.data?.schedule.mappedMode && (
+        <ReturnToFieldConfirmDialog
+          open={returnDialogOpen}
+          onClose={() => setReturnDialogOpen(false)}
+          onConfirm={commitReturn}
+          previousCreatedMode={card.createdMode ?? null}
+          currentUserMode={schedule.data.schedule.mappedMode}
+          isPending={ret.isPending}
+        />
+      )}
     </AppShell>
   );
 }

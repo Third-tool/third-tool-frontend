@@ -495,12 +495,16 @@ export const cardHandlers = [
     const c = state.cards.get(id);
     if (!c) return HttpResponse.json({ code: 'CARD001', message: '카드를 찾을 수 없습니다.' }, { status: 404 });
     // M4 Epic 2: 필드 복귀 시 archiveReason 리셋.
+    // M4 Epic 3 Story 3-2: fresh 재시작 시 createdMode를 사용자 현재 mode로 갱신
+    // (BE `Card.returnToField()` fresh 로직 미러링).
+    const currentUserMode = getScheduleMockState().schedule.mappedMode;
     const updated: MockCard = {
       ...c,
       status: 'ON_FIELD',
       viewCount: 0,
       enteredFieldAt: new Date().toISOString(),
       archiveReason: null,
+      createdMode: currentUserMode,
       updatedDate: new Date().toISOString(),
     };
     state.cards.set(id, updated);
