@@ -16,6 +16,9 @@ import { useAddCardKeyword } from './hooks/useAddCardKeyword';
 import { useRemoveCardKeyword } from './hooks/useRemoveCardKeyword';
 import { useUpdateCardSummary } from './hooks/useUpdateCardSummary';
 import { useDeleteCard } from './hooks/useDeleteCard';
+import { CardScheduleBadge } from './components/CardScheduleBadge';
+import { ArchiveReasonBadge } from './components/ArchiveReasonBadge';
+import { UpcomingExposureIndicator } from './components/UpcomingExposureIndicator';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -280,11 +283,27 @@ export function CardDetailPage() {
           className="rounded-[20px] border border-edge bg-surface p-9"
           style={{ animation: 'fadeInUp .45s var(--ease-spring) both' }}
         >
-          <div className="mb-7 flex items-center gap-2.5">
+          <div className="mb-7 flex flex-wrap items-center gap-2.5">
             <span className="inline-flex items-center gap-1.5 text-xs text-sage-ink">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-sage" />
               {card.status === 'ARCHIVE' ? '참조 보관' : '필드'}
             </span>
+            {card.effectiveMax && (
+              <CardScheduleBadge
+                createdMode={card.createdMode ?? null}
+                effectiveMax={card.effectiveMax}
+              />
+            )}
+            {card.status === 'ON_FIELD' && card.effectiveMax && (
+              <UpcomingExposureIndicator
+                viewCount={card.viewCount}
+                createdMode={card.createdMode ?? null}
+                effectiveMax={card.effectiveMax}
+              />
+            )}
+            {card.status === 'ARCHIVE' && card.archiveReason && (
+              <ArchiveReasonBadge reason={card.archiveReason} />
+            )}
             <span className="ml-auto text-xs text-cream-faint">
               {formatDate(card.enteredFieldAt)} {card.status === 'ARCHIVE' ? '보관' : '진입'}
             </span>

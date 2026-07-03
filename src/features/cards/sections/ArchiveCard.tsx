@@ -3,6 +3,8 @@ import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { TagChip } from '@/components/TagChip';
 import { useReturnToField } from '../hooks/useReturnToField';
+import { ArchiveReasonBadge } from '../components/ArchiveReasonBadge';
+import { CardScheduleBadge } from '../components/CardScheduleBadge';
 import type { Card as CardModel } from '@/lib/api/schemas/card';
 
 interface Props {
@@ -19,6 +21,13 @@ export function ArchiveCard({ card, expanded, onToggle }: Props) {
       <button type="button" onClick={onToggle} className="w-full text-left">
         <p className="text-base leading-relaxed text-cream break-keep">{card.summary}</p>
         <div className="mt-4 flex flex-wrap gap-2">
+          {card.archiveReason && <ArchiveReasonBadge reason={card.archiveReason} />}
+          {card.effectiveMax && (
+            <CardScheduleBadge
+              createdMode={card.createdMode ?? null}
+              effectiveMax={card.effectiveMax}
+            />
+          )}
           {card.tags.map((t) => (
             <TagChip key={t.tagId} label={t.name} />
           ))}

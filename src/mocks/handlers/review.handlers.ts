@@ -204,7 +204,8 @@ export const reviewHandlers = [
         { status: 404 },
       );
     }
-    // Increment viewCount of card we are leaving (and auto-archive at MAX_VIEW).
+    // M4 Epic 2: 자동 아카이브 시 archiveReason='SCHEDULE_EXHAUSTED' (정상 소진).
+    // 구 MAX_VIEW/MAX_DURATION 통합 · MODE_DOWNGRADED는 별도 mode-change 엔드포인트에서 처리.
     const cardState = getCardMockState();
     const leavingId = session.cardIds[session.currentIndex];
     if (leavingId !== undefined) {
@@ -213,11 +214,13 @@ export const reviewHandlers = [
         const now = new Date().toISOString();
         const nextViewCount = card.viewCount + 1;
         const maxView = currentMaxView();
+        const willArchive = nextViewCount >= maxView;
         const updated: MockCard = {
           ...card,
           viewCount: nextViewCount,
           lastViewedAt: now,
-          status: nextViewCount >= maxView ? 'ARCHIVE' : card.status,
+          status: willArchive ? 'ARCHIVE' : card.status,
+          archiveReason: willArchive && card.status === 'ON_FIELD' ? 'SCHEDULE_EXHAUSTED' : card.archiveReason,
           updatedDate: now,
         };
         cardState.cards.set(leavingId, updated);
