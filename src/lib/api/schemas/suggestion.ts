@@ -3,6 +3,7 @@ import { z } from 'zod';
 // product-ai-suggestion Epic 1 — 6-Port Zod 정본 (2026-07-02 pivot).
 // - Layer / Axis Port (S1-1/S1-2) 유지.
 // - Roadmap / Selections Port (S1-3/S1-4) SUPERSEDED — outline/subtree 2단계로 분리.
+//   M4 FE PR#5 (2026-07-15+): 4-Port schema · 훅 · endpoint · MSW route 물리 삭제 완료.
 // - ChaptersOutline / ChapterSubtree / SelectionOutline / SelectionSubtree (S1-5~S1-8) 신설.
 // BE 이슈 #17 대응. 모든 응답에 공통: `suggestionsAvailable`(Cascade 폴백) · `providerContext`(dev only).
 // (참조: `workflows/fe/fe-workspectrum/sdd/in-progress/product-ai-suggestion.md` Story 1-1~1-8)
@@ -53,55 +54,12 @@ export const axisSuggestionsResponseSchema = z.object({
 export type AxisSuggestionsResponse = z.infer<typeof axisSuggestionsResponseSchema>;
 
 // ============================================================
-// 3) Roadmap Port (SUPERSEDED · 2026-07-02) — POST /api/v1/suggestions/roadmaps
+// 3) Roadmap Port · 4) Selections Port
+// ── SUPERSEDED · 2026-07-02 이슈 #17 pivot
+// ── M4 FE PR#5 (2026-07-15+): 물리 삭제 완료
+// ── 대체: (5) ChaptersOutline + (6) ChapterSubtree
+//         (7) SelectionOutline + (8) SelectionSubtree
 // ============================================================
-/**
- * @deprecated 2026-07-02 이슈 #17 pivot — outline/subtree 2단계 분리로 대체.
- * 후속: `chaptersOutlineSuggestionSchema` (S1-5) + `chapterSubtreeSuggestionSchema` (S1-6).
- * 실 훅/컴포넌트 삭제는 M4 (`<RoadmapSuggestButton>` 폐기와 동시).
- */
-export const roadmapSuggestionRequestSchema = z.object({
-  axisId: z.coerce.string(),
-});
-export type RoadmapSuggestionRequest = z.infer<typeof roadmapSuggestionRequestSchema>;
-
-/** @deprecated see roadmapSuggestionRequestSchema. */
-export const roadmapSuggestionResponseSchema = z.object({
-  roadmapDraft: z.string(),
-  suggestionsAvailable: z.boolean(),
-  providerContext: z.string().optional(),
-});
-export type RoadmapSuggestionResponse = z.infer<typeof roadmapSuggestionResponseSchema>;
-
-// ============================================================
-// 4) Selections Port (SUPERSEDED · 2026-07-02) — POST /api/v1/suggestions/selections
-// ============================================================
-/**
- * @deprecated 2026-07-02 이슈 #17 pivot — outline/subtree 2단계 분리로 대체.
- * 후속: `selectionOutlineSuggestionSchema` (S1-7) + `selectionSubtreeSuggestionSchema` (S1-8).
- * 실 훅/컴포넌트 삭제는 M4 (`<SelectionsSuggestButton>` 폐기와 동시).
- */
-export const selectionsSuggestionRequestSchema = z.object({
-  axisId: z.coerce.string(),
-});
-export type SelectionsSuggestionRequest = z.infer<typeof selectionsSuggestionRequestSchema>;
-
-/** @deprecated see selectionsSuggestionRequestSchema. */
-export const selectionSuggestionSchema = z.object({
-  name: z.string(),
-  content: z.string(),
-});
-export type SelectionSuggestion = z.infer<typeof selectionSuggestionSchema>;
-
-/** @deprecated see selectionsSuggestionRequestSchema. */
-export const selectionsSuggestionsResponseSchema = z.object({
-  selections: z.array(selectionSuggestionSchema),
-  suggestionsAvailable: z.boolean(),
-  providerContext: z.string().optional(),
-});
-export type SelectionsSuggestionsResponse = z.infer<
-  typeof selectionsSuggestionsResponseSchema
->;
 
 // ============================================================
 // 공통: 챕터 outline 항목 (5) ~ (8) 재사용

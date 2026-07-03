@@ -19,8 +19,6 @@ import { apiClient } from '@/lib/api/client';
 import {
   suggestLayers,
   suggestAxes,
-  suggestRoadmap,
-  suggestSelections,
 } from './suggestion';
 
 const mockPost = apiClient.post as unknown as ReturnType<typeof vi.fn>;
@@ -70,36 +68,6 @@ describe('suggestAxes', () => {
   });
 });
 
-describe('suggestRoadmap', () => {
-  it('POSTs { axisId } and parses roadmapDraft', async () => {
-    mockPost.mockResolvedValue({
-      data: {
-        roadmapDraft: '# draft',
-        suggestionsAvailable: true,
-        providerContext: 'fallback:llm→static',
-      },
-    });
-    const res = await suggestRoadmap({ axisId: '9' });
-    expect(mockPost).toHaveBeenCalledWith('/api/v1/suggestions/roadmaps', {
-      axisId: '9',
-    });
-    expect(res.roadmapDraft).toBe('# draft');
-    expect(res.providerContext).toContain('fallback');
-  });
-});
-
-describe('suggestSelections', () => {
-  it('POSTs { axisId } and parses selections array', async () => {
-    mockPost.mockResolvedValue({
-      data: {
-        selections: [{ name: '사례 A', content: '요약' }],
-        suggestionsAvailable: true,
-      },
-    });
-    const res = await suggestSelections({ axisId: '9' });
-    expect(mockPost).toHaveBeenCalledWith('/api/v1/suggestions/selections', {
-      axisId: '9',
-    });
-    expect(res.selections[0]).toMatchObject({ name: '사례 A', content: '요약' });
-  });
-});
+// M4 FE PR#5 (2026-07-15+): 4-Port (suggestRoadmap · suggestSelections) SUPERSEDED 물리 삭제 완료.
+// 대체: `suggestChaptersOutline` · `suggestChapterSubtree` · `suggestSelectionOutline` · `suggestSelectionSubtree`.
+// 6-Port hook 통합 테스트는 `src/lib/ai-suggestion/hooks/useSuggest6Port.test.tsx` 참조.
