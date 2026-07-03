@@ -14,6 +14,12 @@ interface RawKeywordDto {
   id: number;
   value: string;
 }
+// M4 재편(2026-07-15+): product-card Epic 2 · Card 배지 3종용 필드.
+// - createdMode  : 카드 생성 당시 사용자 LearningMode 스냅샷 (`ScheduleModeChangeAt` 이전).
+// - archiveReason: 3-reason (MANUAL/SCHEDULE_EXHAUSTED/MODE_DOWNGRADED) · null=활동중.
+type MockLearningMode = 'MODE_7D' | 'MODE_14D' | 'MODE_28D' | 'MODE_60D';
+type MockArchiveReason = 'MANUAL' | 'SCHEDULE_EXHAUSTED' | 'MODE_DOWNGRADED';
+
 export interface MockCard {
   cardId: number;
   deckId: number;
@@ -27,6 +33,8 @@ export interface MockCard {
   lastViewedAt: string | null;
   createdDate: string;
   updatedDate: string;
+  createdMode: MockLearningMode | null;
+  archiveReason: MockArchiveReason | null;
 }
 
 export interface MockState {
@@ -51,6 +59,7 @@ function seed(): MockState {
       keywords: [kw(1, 'JPA'), kw(2, '영속성')], tags: [tag(1, 'JPA')],
       mainText: 'JPA persistence context acts as a 1st level cache.',
       lastViewedAt: null, createdDate: now, updatedDate: now,
+      createdMode: 'MODE_14D', archiveReason: null,
     },
     {
       cardId: 2, deckId: DEFAULT_DECK_ID, status: 'ON_FIELD', enteredFieldAt: now, viewCount: 1,
@@ -58,6 +67,7 @@ function seed(): MockState {
       keywords: [kw(3, 'Index'), kw(4, 'BTree')], tags: [tag(2, 'DB')],
       mainText: 'Only leaf nodes of B+ trees hold actual data.',
       lastViewedAt: null, createdDate: now, updatedDate: now,
+      createdMode: 'MODE_28D', archiveReason: null,
     },
     {
       cardId: 3, deckId: DEFAULT_DECK_ID, status: 'ON_FIELD', enteredFieldAt: now, viewCount: 2,
@@ -65,6 +75,8 @@ function seed(): MockState {
       keywords: [kw(5, 'Kafka')], tags: [tag(3, 'Kafka')],
       mainText: 'Kafka consumer groups track offsets per partition.',
       lastViewedAt: null, createdDate: now, updatedDate: now,
+      // M4 데모: 생성 당시 MODE_28D · 이후 사용자가 MODE_14D로 다운그레이드된 시나리오.
+      createdMode: 'MODE_28D', archiveReason: null,
     },
     {
       cardId: 11, deckId: DEFAULT_DECK_ID, status: 'ARCHIVE', enteredFieldAt: old, viewCount: 5,
@@ -72,6 +84,7 @@ function seed(): MockState {
       keywords: [kw(11, 'HTTP/2')], tags: [tag(4, 'Network')],
       mainText: 'HTTP/2 header compression uses static + dynamic tables.',
       lastViewedAt: null, createdDate: old, updatedDate: old,
+      createdMode: 'MODE_28D', archiveReason: 'SCHEDULE_EXHAUSTED',
     },
     {
       cardId: 12, deckId: DEFAULT_DECK_ID, status: 'ARCHIVE', enteredFieldAt: old, viewCount: 5,
@@ -79,6 +92,8 @@ function seed(): MockState {
       keywords: [kw(12, 'TLS')], tags: [tag(4, 'Network')],
       mainText: 'TLS 1.3 supports 0-RTT resumption.',
       lastViewedAt: null, createdDate: old, updatedDate: old,
+      // M4 데모: 사용자가 MODE_60D → MODE_14D 다운그레이드하며 소진 처리.
+      createdMode: 'MODE_60D', archiveReason: 'MODE_DOWNGRADED',
     },
   ];
   const map = new Map<number, MockCard>();
@@ -154,6 +169,17 @@ function stateForViewCount(viewCount: number): SoftScheduleState {
   return daysToState(intervals[idx]!);
 }
 
+// M4 재편(2026-07-15+): 현재 사용자 스케줄로부터 유효 max·intervals 스냅샷을 조립.
+// BE `EffectiveMaxCalculator` 스냅샷 미러링 · product-card Epic 2 Story 2-1.
+function currentEffectiveMax() {
+  const s = getScheduleMockState().schedule;
+  return {
+    mode: s.mappedMode,
+    maxView: s.maxView,
+    intervals: s.softScheduleIntervals,
+  };
+}
+
 function toDetail(c: MockCard) {
   return {
     cardId: c.cardId,
@@ -168,6 +194,9 @@ function toDetail(c: MockCard) {
     lastViewedAt: c.lastViewedAt,
     createdDate: c.createdDate,
     updatedDate: c.updatedDate,
+    createdMode: c.createdMode,
+    effectiveMax: currentEffectiveMax(),
+    archiveReason: c.archiveReason,
   };
 }
 
@@ -183,6 +212,9 @@ function toSummary(c: MockCard) {
     viewCount: c.viewCount,
     lastViewedAt: c.lastViewedAt,
     createdDate: c.createdDate,
+    createdMode: c.createdMode,
+    effectiveMax: currentEffectiveMax(),
+    archiveReason: c.archiveReason,
   };
 }
 
@@ -446,7 +478,13 @@ export const cardHandlers = [
     const id = Number(params.id);
     const c = state.cards.get(id);
     if (!c) return HttpResponse.json({ code: 'CARD001', message: '카드를 찾을 수 없습니다.' }, { status: 404 });
-    const updated: MockCard = { ...c, status: 'ARCHIVE', updatedDate: new Date().toISOString() };
+    // M4 Epic 2: 명시 아카이브는 archiveReason=MANUAL로 표기.
+    const updated: MockCard = {
+      ...c,
+      status: 'ARCHIVE',
+      archiveReason: 'MANUAL',
+      updatedDate: new Date().toISOString(),
+    };
     state.cards.set(id, updated);
     persist();
     return HttpResponse.json(toDetail(updated));
@@ -456,11 +494,13 @@ export const cardHandlers = [
     const id = Number(params.id);
     const c = state.cards.get(id);
     if (!c) return HttpResponse.json({ code: 'CARD001', message: '카드를 찾을 수 없습니다.' }, { status: 404 });
+    // M4 Epic 2: 필드 복귀 시 archiveReason 리셋.
     const updated: MockCard = {
       ...c,
       status: 'ON_FIELD',
       viewCount: 0,
       enteredFieldAt: new Date().toISOString(),
+      archiveReason: null,
       updatedDate: new Date().toISOString(),
     };
     state.cards.set(id, updated);
@@ -488,6 +528,8 @@ export const cardHandlers = [
     }
     const id = state.nextId++;
     const now = new Date().toISOString();
+    // M4 Epic 2: 생성 시점 사용자 mode를 createdMode로 고정 스냅샷.
+    const createdMode = getScheduleMockState().schedule.mappedMode;
     const card: MockCard = {
       cardId: id,
       deckId,
@@ -501,6 +543,8 @@ export const cardHandlers = [
       lastViewedAt: null,
       createdDate: now,
       updatedDate: now,
+      createdMode,
+      archiveReason: null,
     };
     state.cards.set(id, card);
     persist();

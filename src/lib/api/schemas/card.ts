@@ -1,10 +1,41 @@
 import { z } from 'zod';
+import {
+  LearningModeSchema,
+  LEARNING_MODE_META,
+  type LearningMode,
+} from './learningMode';
 
 export const CardStatusSchema = z.enum(['ON_FIELD', 'ARCHIVE']);
 export type CardStatus = z.infer<typeof CardStatusSchema>;
 
-export const ArchiveReasonSchema = z.enum(['MANUAL', 'MAX_VIEW', 'MAX_DURATION']);
+// M4 재편(2026-07-15+): 3-reason 재정의 · product-card Epic 2.
+// - MANUAL             : 사용자 명시 아카이브
+// - SCHEDULE_EXHAUSTED : maxView 도달 · 정상 소진 (구 MAX_VIEW/MAX_DURATION 통합)
+// - MODE_DOWNGRADED    : 사용자가 스케줄 mode를 낮춰 effectiveMax가 재계산돼 소진 처리
+// legacy MAX_VIEW/MAX_DURATION 응답 수신 시 SCHEDULE_EXHAUSTED로 재매핑 (adapter 담당).
+export const ArchiveReasonSchema = z.enum([
+  'MANUAL',
+  'SCHEDULE_EXHAUSTED',
+  'MODE_DOWNGRADED',
+]);
 export type ArchiveReason = z.infer<typeof ArchiveReasonSchema>;
+
+const LegacyArchiveReasonSchema = z.enum([
+  'MANUAL',
+  'MAX_VIEW',
+  'MAX_DURATION',
+  'SCHEDULE_EXHAUSTED',
+  'MODE_DOWNGRADED',
+]);
+export type LegacyArchiveReason = z.infer<typeof LegacyArchiveReasonSchema>;
+
+export function normalizeArchiveReason(
+  raw: LegacyArchiveReason | null | undefined,
+): ArchiveReason | null {
+  if (!raw) return null;
+  if (raw === 'MAX_VIEW' || raw === 'MAX_DURATION') return 'SCHEDULE_EXHAUSTED';
+  return raw;
+}
 
 export const MainContentTypeSchema = z.enum(['TEXT', 'IMAGE', 'BOTH']);
 export type MainContentType = z.infer<typeof MainContentTypeSchema>;
@@ -25,6 +56,18 @@ export const KeywordOnCardSchema = z.object({
 });
 export type KeywordOnCard = z.infer<typeof KeywordOnCardSchema>;
 
+// M4 재편(2026-07-15+): product-card Epic 2 · Card 배지 3종용 필드 신설.
+// - createdMode : 카드 생성 시점의 LearningMode 스냅샷 (`ScheduleModeChangeAt` 이전 기준).
+// - effectiveMax: 현재 활성 스케줄로 재계산된 유효 maxView + intervals + 파생 mode.
+//                 사용자가 mode를 다운그레이드하면 createdMode > effectiveMax.mode 상황이 발생.
+// null 허용: 이력 카드(M4 이전 생성)는 createdMode 미기록 · effectiveMax는 항상 존재.
+export const EffectiveMaxSchema = z.object({
+  mode: LearningModeSchema,
+  maxView: z.number().int().positive(),
+  intervals: z.array(z.number().int().positive()),
+});
+export type EffectiveMax = z.infer<typeof EffectiveMaxSchema>;
+
 export const CardSchema = z.object({
   cardId: z.coerce.string(),
   deckId: z.coerce.string().optional(),
@@ -35,6 +78,9 @@ export const CardSchema = z.object({
   keywords: z.array(KeywordOnCardSchema),
   tags: z.array(TagSchema),
   lastViewedAt: z.string().nullable().optional(),
+  createdMode: LearningModeSchema.nullable().optional(),
+  effectiveMax: EffectiveMaxSchema.optional(),
+  archiveReason: ArchiveReasonSchema.nullable().optional(),
 });
 export type Card = z.infer<typeof CardSchema>;
 
@@ -46,12 +92,31 @@ export const ViewCardResponseSchema = z.object({
 });
 export type ViewCardResponse = z.infer<typeof ViewCardResponseSchema>;
 
+/**
+ * createdMode · effectiveMax · 진행 인덱스로 다음 노출 D일을 계산.
+ * - createdMode가 없으면 effectiveMax.intervals 기준 (하위 호환).
+ * - viewCount >= 유효 maxView 이면 null (더 이상 노출 없음 · 아카이브 대상).
+ * (Story 2-4 · `<UpcomingExposureIndicator>` 코어 로직)
+ */
+export function nextExposureDays(input: {
+  viewCount: number;
+  createdMode?: LearningMode | null;
+  effectiveMax: EffectiveMax;
+}): number | null {
+  const source = input.createdMode
+    ? LEARNING_MODE_META[input.createdMode].intervals
+    : input.effectiveMax.intervals;
+  const maxView = input.effectiveMax.maxView;
+  if (input.viewCount >= maxView) return null;
+  const idx = input.viewCount;
+  if (idx >= source.length) return null;
+  return source[idx] ?? null;
+}
+
 // M4 재편(2026-07-15+): 4옵션 (MODE_7D/14D/28D/60D · product-card Epic 1).
 // 기존 3옵션 (TEN_DAYS/TWENTY_DAYS/THIRTY_DAYS) SUPERSEDED · learningMode.ts SoT 사용.
 export { LearningModeSchema as ScheduleModeSchema } from './learningMode';
 export type { LearningMode as ScheduleMode } from './learningMode';
-
-import { LearningModeSchema } from './learningMode';
 
 export const ScheduleConfigSchema = z.object({
   scheduleMode: LearningModeSchema,
@@ -106,6 +171,9 @@ export const RawCardDetailSchema = z.object({
   lastViewedAt: z.string().nullable().optional(),
   createdDate: z.string().optional(),
   updatedDate: z.string().optional(),
+  createdMode: LearningModeSchema.nullable().optional(),
+  effectiveMax: EffectiveMaxSchema.optional(),
+  archiveReason: LegacyArchiveReasonSchema.nullable().optional(),
 });
 export type RawCardDetail = z.infer<typeof RawCardDetailSchema>;
 
@@ -120,6 +188,9 @@ export const RawCardSummarySchema = z.object({
   viewCount: z.number().int().nonnegative(),
   lastViewedAt: z.string().nullable().optional(),
   createdDate: z.string().optional(),
+  createdMode: LearningModeSchema.nullable().optional(),
+  effectiveMax: EffectiveMaxSchema.optional(),
+  archiveReason: LegacyArchiveReasonSchema.nullable().optional(),
 });
 export type RawCardSummary = z.infer<typeof RawCardSummarySchema>;
 
@@ -134,6 +205,9 @@ export function adaptCardDetail(raw: RawCardDetail): Card {
     keywords: raw.keywords.map((k) => ({ id: k.id, value: k.value })),
     tags: raw.tags.map((t) => ({ tagId: t.id, name: t.value })),
     lastViewedAt: raw.lastViewedAt ?? null,
+    createdMode: raw.createdMode ?? null,
+    effectiveMax: raw.effectiveMax,
+    archiveReason: normalizeArchiveReason(raw.archiveReason),
   };
 }
 
@@ -148,6 +222,9 @@ export function adaptCardSummary(raw: RawCardSummary, deckId?: string): Card {
     keywords: raw.keywords.map((k) => ({ id: k.id, value: k.value })),
     tags: raw.tags.map((t) => ({ tagId: t.id, name: t.value })),
     lastViewedAt: raw.lastViewedAt ?? null,
+    createdMode: raw.createdMode ?? null,
+    effectiveMax: raw.effectiveMax,
+    archiveReason: normalizeArchiveReason(raw.archiveReason),
   };
 }
 
