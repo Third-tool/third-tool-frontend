@@ -172,6 +172,15 @@ export async function listArchiveCards(filter: ArchiveFilter = {}): Promise<Card
     .map((c) => adaptCardSummary(c, filter.deckId));
 }
 
+// M5 신설(2026-07-22+): LT-E4-CARD-AXIS · Card → Axis 직접 매핑 대응.
+// GET /api/v1/axes/{axisId}/cards → 이 축에 연결된 카드 리스트.
+// BE PR#4 (LT-E4-CARD-AXIS · `card.axis_id NOT NULL` 승격) 응답 소비.
+export async function listAxisCards(axisId: string): Promise<Card[]> {
+  const { data } = await apiClient.get(`/api/v1/axes/${axisId}/cards`);
+  const list = z.array(RawCardSummarySchema).parse(data);
+  return list.map((c) => adaptCardSummary(c));
+}
+
 // Backend doesn't yet offer "extend session by N" — re-fetch today with a new
 // target. completedAll is true when the new pool is empty.
 export async function extendSession(params: { count: number }): Promise<ExtendReviewResponse> {

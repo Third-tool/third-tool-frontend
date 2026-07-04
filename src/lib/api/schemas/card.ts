@@ -71,6 +71,9 @@ export type EffectiveMax = z.infer<typeof EffectiveMaxSchema>;
 export const CardSchema = z.object({
   cardId: z.coerce.string(),
   deckId: z.coerce.string().optional(),
+  // M5 신설(2026-07-22+): LT-E4-CARD-AXIS · Card → Axis 직접 매핑.
+  // BE PR#4 응답의 `card.axis_id NOT NULL` 승격 대응. Deck 폐기 대비 optional 유지.
+  axisId: z.string().nullable().optional(),
   status: CardStatusSchema,
   enteredFieldAt: z.string(),
   viewCount: z.number().int().nonnegative(),
@@ -161,6 +164,7 @@ const RawMainNoteDtoSchema = z.object({
 export const RawCardDetailSchema = z.object({
   cardId: z.coerce.string(),
   deckId: z.coerce.string(),
+  axisId: z.string().nullable().optional(),
   mainNote: RawMainNoteDtoSchema,
   keywords: z.array(RawKeywordDtoSchema),
   summary: z.string(),
@@ -179,6 +183,7 @@ export type RawCardDetail = z.infer<typeof RawCardDetailSchema>;
 
 export const RawCardSummarySchema = z.object({
   cardId: z.coerce.string(),
+  axisId: z.string().nullable().optional(),
   keywords: z.array(RawKeywordDtoSchema),
   summary: z.string(),
   tags: z.array(RawTagDtoSchema),
@@ -198,6 +203,7 @@ export function adaptCardDetail(raw: RawCardDetail): Card {
   return {
     cardId: raw.cardId,
     deckId: raw.deckId,
+    axisId: raw.axisId ?? null,
     status: raw.status,
     enteredFieldAt: raw.enteredFieldAt,
     viewCount: raw.viewCount,
@@ -215,6 +221,7 @@ export function adaptCardSummary(raw: RawCardSummary, deckId?: string): Card {
   return {
     cardId: raw.cardId,
     deckId,
+    axisId: raw.axisId ?? null,
     status: raw.status,
     enteredFieldAt: raw.enteredFieldAt,
     viewCount: raw.viewCount,
