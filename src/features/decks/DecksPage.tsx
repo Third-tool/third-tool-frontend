@@ -10,6 +10,7 @@ import { DeckItem } from './components/DeckItem';
 import { CreateDeckDialog } from './components/CreateDeckDialog';
 import { RenameDeckDialog } from './components/RenameDeckDialog';
 import { MoveDeckDialog } from './components/MoveDeckDialog';
+import { DeckDeprecatedBanner } from './components/DeckDeprecatedBanner';
 
 interface DeleteTarget {
   deckId: string;
@@ -81,6 +82,7 @@ export function DecksPage() {
 
   return (
     <AppShell topbar={topbar}>
+      <DeckDeprecatedBanner />
       <div className="mb-7">
         <h1 className="m-0 mb-2 font-serif text-[32px] font-medium leading-none tracking-[-0.02em] text-cream">
           덱 관리

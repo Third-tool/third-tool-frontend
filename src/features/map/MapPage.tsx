@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { Dialog } from '@/components/Dialog';
 import { Icon } from '@/components/Icon';
@@ -101,6 +102,7 @@ function nowLabel(): string {
 }
 
 export function MapPage() {
+  const navigate = useNavigate();
   const facade = useLearningFacade();
   const renameAxisMut = useRenameAxis();
   const reorderAxesMut = useReorderAxes();
@@ -500,8 +502,18 @@ export function MapPage() {
     const d = dragRef.current;
     dragRef.current = null;
     if (d && !d.moved) {
-      if (d.kind === 'group') setActiveGroup(d.id);
-      else if (d.kind === 'track' && d.groupId) setActiveGroup(d.groupId);
+      if (d.kind === 'group') {
+        setActiveGroup(d.id);
+      } else if (d.kind === 'track') {
+        // M5 (2026-07-22+): axis 노드 클릭 시 /axes/:axisId 진입선 배선.
+        // 저장된 axis (t-{axisId}) 는 상세 페이지로 이동 · 로컬 미저장 (t-x-n) 은 기존 group 활성만.
+        const axisId = extractAxisId(d.id);
+        if (axisId) {
+          navigate(`/axes/${axisId}`);
+        } else if (d.groupId) {
+          setActiveGroup(d.groupId);
+        }
+      }
     }
   };
 
@@ -994,24 +1006,46 @@ function OverviewLens({
           </div>
         ))}
 
-        {trackNodes.map((t) => (
-          <div
-            key={t.id}
-            onMouseDown={(e) => onNodeDown(t.id, 'track', e, t.groupId)}
-            className="absolute z-[3] cursor-grab active:cursor-grabbing"
-            style={{ left: t.x, top: t.y, transform: 'translate(-50%, -50%)' }}
-          >
-            <div className="grid h-8 w-8 place-items-center rounded-full border-[1.5px] border-amber-line bg-surface shadow-[0_3px_8px_rgba(0,0,0,0.08)]">
-              <span
-                className="block h-2.5 w-2.5 rounded-full"
-                style={{ background: t.dot }}
-              />
+        {trackNodes.map((t) => {
+          const isSaved = t.id.startsWith('t-') && !t.id.startsWith('t-x-');
+          return (
+            <div
+              key={t.id}
+              onMouseDown={(e) => onNodeDown(t.id, 'track', e, t.groupId)}
+              role={isSaved ? 'button' : undefined}
+              aria-label={isSaved ? `${t.name} 축 상세로 이동` : undefined}
+              title={isSaved ? '클릭 시 축 상세 열기' : undefined}
+              className={
+                isSaved
+                  ? 'group absolute z-[3] cursor-pointer active:cursor-grabbing'
+                  : 'absolute z-[3] cursor-grab active:cursor-grabbing'
+              }
+              style={{ left: t.x, top: t.y, transform: 'translate(-50%, -50%)' }}
+            >
+              <div
+                className={
+                  isSaved
+                    ? 'grid h-8 w-8 place-items-center rounded-full border-[1.5px] border-amber-line bg-surface shadow-[0_3px_8px_rgba(0,0,0,0.08)] transition-all group-hover:border-amber group-hover:shadow-[0_4px_12px_rgba(196,103,63,0.35)]'
+                    : 'grid h-8 w-8 place-items-center rounded-full border-[1.5px] border-amber-line bg-surface shadow-[0_3px_8px_rgba(0,0,0,0.08)]'
+                }
+              >
+                <span
+                  className="block h-2.5 w-2.5 rounded-full"
+                  style={{ background: t.dot }}
+                />
+              </div>
+              <div
+                className={
+                  isSaved
+                    ? 'absolute left-1/2 top-[38px] -translate-x-1/2 whitespace-nowrap text-xs text-cream-mute transition-colors group-hover:text-amber'
+                    : 'absolute left-1/2 top-[38px] -translate-x-1/2 whitespace-nowrap text-xs text-cream-mute'
+                }
+              >
+                {t.name}
+              </div>
             </div>
-            <div className="absolute left-1/2 top-[38px] -translate-x-1/2 whitespace-nowrap text-xs text-cream-mute">
-              {t.name}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

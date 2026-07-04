@@ -5,7 +5,7 @@ import { RoadmapNodeList } from './components/RoadmapNodeList';
 import { SelectionContainerList } from './components/SelectionContainerList';
 import { ConceptSpecTooltip } from './components/ConceptSpecTooltip';
 import { AxisAiDraftButton } from './components/AxisAiDraftButton';
-import { CardsAxisShell } from './components/CardsAxisShell';
+import { CardsAxisList } from './components/CardsAxisList';
 import { useLearningFacade } from '@/features/auth/hooks/useLearningFacade';
 
 // product-learning-tower Epic 3 Story 3-2 (M4 · 2026-07-15+).
@@ -136,7 +136,7 @@ export function AxisDetailPage() {
           className="flex flex-col gap-4"
         >
           <h2 className="text-sm font-semibold text-cream">Cards</h2>
-          <CardsAxisShell axisId={axisId} />
+          <CardsAxisList axisId={axisId} />
         </div>
       </div>
     </AppShell>

@@ -55,14 +55,13 @@ describe('<AxisDetailPage> (Story 3-2 · sticky mount)', () => {
     expect(roadmapPanel?.children.length ?? 0).toBe(roadmapChildrenBefore);
   });
 
-  it('edge · Cards 탭 → CardsAxisShell + axisId 표기', () => {
+  it('edge · Cards 탭 → CardsAxisList 진입 · MSW 응답 대기 skeleton 후 로드', async () => {
     render(<AxisDetailPage />, { wrapper: wrap() });
     fireEvent.click(screen.getByRole('tab', { name: 'Cards' }));
     const cardsPanel = document.getElementById('panel-cards');
     expect(cardsPanel).not.toHaveAttribute('hidden');
-    const shell = within(cardsPanel as HTMLElement);
-    expect(shell.getByLabelText('이 축의 카드')).toBeInTheDocument();
-    expect(shell.getByText('axis-1')).toBeInTheDocument();
+    // MSW 응답 도착 대기 · axis-1에 매핑된 seed 카드 2장 (card 1·2) 노출.
+    await screen.findByLabelText('이 축의 카드');
   });
 
   it('error · <ConceptSpecTooltip> Roadmap 모드가 Roadmap 탭에 첫 마운트에서 open', () => {

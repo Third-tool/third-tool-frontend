@@ -35,6 +35,9 @@ export interface MockCard {
   updatedDate: string;
   createdMode: MockLearningMode | null;
   archiveReason: MockArchiveReason | null;
+  // M5 신설(2026-07-22+): LT-E4-CARD-AXIS · Card → Axis 직접 매핑.
+  // seed 카드마다 axisId 태그 · Cards 탭 실 리스트 활성화용.
+  axisId: string | null;
 }
 
 export interface MockState {
@@ -60,6 +63,7 @@ function seed(): MockState {
       mainText: 'JPA persistence context acts as a 1st level cache.',
       lastViewedAt: null, createdDate: now, updatedDate: now,
       createdMode: 'MODE_14D', archiveReason: null,
+      axisId: 'axis-1',
     },
     {
       cardId: 2, deckId: DEFAULT_DECK_ID, status: 'ON_FIELD', enteredFieldAt: now, viewCount: 1,
@@ -68,6 +72,7 @@ function seed(): MockState {
       mainText: 'Only leaf nodes of B+ trees hold actual data.',
       lastViewedAt: null, createdDate: now, updatedDate: now,
       createdMode: 'MODE_28D', archiveReason: null,
+      axisId: 'axis-1',
     },
     {
       cardId: 3, deckId: DEFAULT_DECK_ID, status: 'ON_FIELD', enteredFieldAt: now, viewCount: 2,
@@ -77,6 +82,7 @@ function seed(): MockState {
       lastViewedAt: null, createdDate: now, updatedDate: now,
       // M4 데모: 생성 당시 MODE_28D · 이후 사용자가 MODE_14D로 다운그레이드된 시나리오.
       createdMode: 'MODE_28D', archiveReason: null,
+      axisId: 'axis-2',
     },
     {
       cardId: 11, deckId: DEFAULT_DECK_ID, status: 'ARCHIVE', enteredFieldAt: old, viewCount: 5,
@@ -85,6 +91,7 @@ function seed(): MockState {
       mainText: 'HTTP/2 header compression uses static + dynamic tables.',
       lastViewedAt: null, createdDate: old, updatedDate: old,
       createdMode: 'MODE_28D', archiveReason: 'SCHEDULE_EXHAUSTED',
+      axisId: 'axis-3',
     },
     {
       cardId: 12, deckId: DEFAULT_DECK_ID, status: 'ARCHIVE', enteredFieldAt: old, viewCount: 5,
@@ -94,6 +101,7 @@ function seed(): MockState {
       lastViewedAt: null, createdDate: old, updatedDate: old,
       // M4 데모: 사용자가 MODE_60D → MODE_14D 다운그레이드하며 소진 처리.
       createdMode: 'MODE_60D', archiveReason: 'MODE_DOWNGRADED',
+      axisId: 'axis-3',
     },
   ];
   const map = new Map<number, MockCard>();
@@ -184,6 +192,7 @@ function toDetail(c: MockCard) {
   return {
     cardId: c.cardId,
     deckId: c.deckId,
+    axisId: c.axisId,
     mainNote: { textContent: c.mainText, imageUrl: null, contentType: 'TEXT' },
     keywords: c.keywords,
     summary: c.summary,
@@ -203,6 +212,7 @@ function toDetail(c: MockCard) {
 function toSummary(c: MockCard) {
   return {
     cardId: c.cardId,
+    axisId: c.axisId,
     keywords: c.keywords,
     summary: c.summary,
     tags: c.tags,
@@ -518,6 +528,16 @@ export const cardHandlers = [
     return HttpResponse.json(list);
   }),
 
+  // M5 신설(2026-07-22+): LT-E4-CARD-AXIS · GET /axes/:axisId/cards.
+  // 해당 axisId 태그된 카드 리스트 반환 · Cards 탭 실 활성화용.
+  http.get('/api/v1/axes/:axisId/cards', ({ params }) => {
+    const axisId = params.axisId as string;
+    const list = [...state.cards.values()]
+      .filter((c) => c.axisId === axisId)
+      .map(toSummary);
+    return HttpResponse.json(list);
+  }),
+
   http.post('/api/v1/decks/:deckId/cards', async ({ params, request }) => {
     const deckId = Number(params.deckId);
     const body = (await request.json()) as {
@@ -549,6 +569,8 @@ export const cardHandlers = [
       updatedDate: now,
       createdMode,
       archiveReason: null,
+      // M5 (2026-07-22+): Deck-scoped 생성은 임시로 axisId=null · M6 CreateCardForm Axis 재편에서 실제 값 세팅.
+      axisId: null,
     };
     state.cards.set(id, card);
     persist();
