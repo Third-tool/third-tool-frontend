@@ -22,6 +22,7 @@ import { LearningFacadePage } from '@/features/learning-facade/LearningFacadePag
 import { LayersListPage } from '@/features/layers/LayersListPage';
 import { LayerDetailPage } from '@/features/layers/LayerDetailPage';
 import { AxisDetailPage } from '@/features/axes/AxisDetailPage';
+import { DailyBatchLandingPage } from '@/features/review/DailyBatchLandingPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -49,6 +50,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute requireConcept>
         <StudyPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/review',
+    element: (
+      <ProtectedRoute requireConcept>
+        <DailyBatchLandingPage />
       </ProtectedRoute>
     ),
   },
