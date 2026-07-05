@@ -17,8 +17,7 @@ import { MapPage } from '@/features/map/MapPage';
 import { TagsListPage } from '@/features/tags/TagsListPage';
 import { TagDetailPage } from '@/features/tags/TagDetailPage';
 // M5 PR#3 (2026-07-22+): /decks · /decks/:deckId hard redirect → /review.
-// PR#1의 <DeckDeprecatedBanner>는 dead code (실 진입 불가) · PR#5에서 물리 삭제 예정.
-// 저장 URL 방어 6개월 유지 정책.
+// M5 PR#5 (2026-07-22+): Deck 참조 UI 물리 삭제 완료 · redirect만 유지 (저장 URL 방어 6개월).
 import { ConceptsEditPage } from '@/features/learning-facade/ConceptsEditPage';
 import { LearningFacadePage } from '@/features/learning-facade/LearningFacadePage';
 import { LayersListPage } from '@/features/layers/LayersListPage';

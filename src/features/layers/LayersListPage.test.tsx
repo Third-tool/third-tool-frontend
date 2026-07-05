@@ -3,7 +3,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LayersListPage } from './LayersListPage';
-import { DeckProvider } from '@/features/decks/DeckContext';
 import { resetLayerMockState } from '@/mocks/handlers/layer.handlers';
 import type { ReactNode } from 'react';
 
@@ -11,9 +10,7 @@ function makeWrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <DeckProvider>{children}</DeckProvider>
-      </MemoryRouter>
+      <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   );
 }

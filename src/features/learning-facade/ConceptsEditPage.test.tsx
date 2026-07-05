@@ -8,7 +8,6 @@ import type { ReactNode } from 'react';
 import { server } from '@/mocks/node';
 import { resetFacadeMockState } from '@/mocks/handlers/facade.handlers';
 import { LEARNING_FACADE_KEY } from '@/features/auth/hooks/useLearningFacade';
-import { DeckProvider } from '@/features/decks/DeckContext';
 import type { LearningFacade } from '@/lib/api/schemas/facade';
 import { ConceptsEditPage } from './ConceptsEditPage';
 
@@ -33,9 +32,7 @@ function makeHarness(initialConcepts: string[] = ['기존']) {
   client.setQueryData<LearningFacade>(LEARNING_FACADE_KEY, initial);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <DeckProvider>{children}</DeckProvider>
-      </MemoryRouter>
+      <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   );
   return { wrapper, client, initial };

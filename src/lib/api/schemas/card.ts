@@ -131,9 +131,10 @@ export type ScheduleConfig = z.infer<typeof ScheduleConfigSchema>;
 
 // Frontend create request — assembled in the form. The endpoint layer
 // transforms it into Backend's CardRequest.Create shape (mainNote object,
-// keyword string list, tag value list) and posts to /api/v1/decks/{deckId}/cards.
+// keyword string list, tag value list) and posts to /api/v1/axes/{axisId}/cards.
+// M5 신설(2026-07-22+): LT-E5-DECK-ABOLISH · Deck 폐기 · Axis 직접 매핑.
 export const CreateCardRequestSchema = z.object({
-  deckId: z.coerce.string(),
+  axisId: z.string().min(1),
   summary: z.string().min(1).max(500),
   keywords: z.array(z.string().min(1)).min(1),
   tags: z.array(z.string()).max(3).default([]),

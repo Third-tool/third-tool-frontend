@@ -8,7 +8,6 @@ import type { ReactNode } from 'react';
 import { server } from '@/mocks/node';
 import { resetLayerMockState } from '@/mocks/handlers/layer.handlers';
 import { LAYERS_KEY } from './hooks/useLayers';
-import { DeckProvider } from '@/features/decks/DeckContext';
 import type { Layer } from '@/lib/api/schemas/layer';
 import { LayerDetailPage } from './LayerDetailPage';
 
@@ -27,11 +26,9 @@ function makeWrapper(initial: Layer[]) {
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/layers/2']}>
-        <DeckProvider>
-          <Routes>
-            <Route path="/layers/:layerId" element={children} />
-          </Routes>
-        </DeckProvider>
+        <Routes>
+          <Route path="/layers/:layerId" element={children} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );

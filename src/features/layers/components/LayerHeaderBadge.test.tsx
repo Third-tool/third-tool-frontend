@@ -31,4 +31,28 @@ describe('LayerHeaderBadge', () => {
     render(<LayerHeaderBadge />);
     expect(screen.getByRole('status')).toHaveTextContent('축 -- / 10');
   });
+
+  it('M5 · LT E6 S6-5 · progressStatus NOT_STARTED 회색', () => {
+    render(<LayerHeaderBadge axisCount={3} progressStatus="NOT_STARTED" />);
+    const badge = screen.getByLabelText('진행 상태 아직 시작 안 함');
+    expect(badge).toBeInTheDocument();
+    expect(badge.className).toMatch(/bg-glass/);
+    expect(badge.className).toMatch(/text-cream-mute/);
+  });
+
+  it('M5 · LT E6 S6-5 · progressStatus IN_PROGRESS 주황', () => {
+    render(<LayerHeaderBadge axisCount={3} progressStatus="IN_PROGRESS" />);
+    const badge = screen.getByLabelText('진행 상태 학습 중');
+    expect(badge).toBeInTheDocument();
+    expect(badge.className).toMatch(/bg-amber\/20/);
+    expect(badge.className).toMatch(/text-amber-deep/);
+  });
+
+  it('M5 · LT E6 S6-5 · progressStatus COMPLETED 녹색', () => {
+    render(<LayerHeaderBadge axisCount={3} progressStatus="COMPLETED" />);
+    const badge = screen.getByLabelText('진행 상태 완료');
+    expect(badge).toBeInTheDocument();
+    expect(badge.className).toMatch(/bg-emerald\/20/);
+    expect(badge.className).toMatch(/text-emerald/);
+  });
 });

@@ -2,21 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useArchive } from './useArchive';
-import { DeckProvider } from '@/features/decks/DeckContext';
 import type { ReactNode } from 'react';
 
 function wrap() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>
-      <DeckProvider>{children}</DeckProvider>
-    </QueryClientProvider>
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
 }
 
-describe('useArchive', () => {
-  it('lists archived cards from the deck-scoped MSW handler', async () => {
-    const { result } = renderHook(() => useArchive({ deckId: '1' }), { wrapper: wrap() });
+describe('useArchive (M5 · Axis 스코프 재편)', () => {
+  it('lists archived cards from axis-scoped endpoint (axis-3 = ARCHIVE seed)', async () => {
+    const { result } = renderHook(() => useArchive({ axisId: 'axis-3' }), { wrapper: wrap() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.length).toBeGreaterThan(0);
     expect(result.current.data?.every((c) => c.status === 'ARCHIVE')).toBe(true);
