@@ -2,8 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { KeywordInput } from './KeywordInput';
 import { TagInput } from './TagInput';
 import { useCreateCard } from '../hooks/useCreateCard';
-import { useSelectedDeck } from '@/features/decks/DeckContext';
-import { useDecks } from '@/features/decks/hooks/useDecks';
+import { useLearningFacade } from '@/features/auth/hooks/useLearningFacade';
 import { ApiError } from '@/lib/api/client';
 
 const FIELD_ERROR: Record<string, string> = {
@@ -27,25 +26,26 @@ export function CreateCardForm({ onSuccess, footerSlot }: Props) {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [inline, setInline] = useState<string | null>(null);
+  const [selectedAxisId, setSelectedAxisId] = useState<string | null>(null);
   const create = useCreateCard();
-  const { selectedDeckId, setSelectedDeckId } = useSelectedDeck();
-  const decks = useDecks();
+  const facade = useLearningFacade();
 
-  const deckList = decks.data?.content ?? [];
-  const activeDeckId = selectedDeckId ?? deckList[0]?.deckId ?? null;
+  // M5 재편(2026-07-22+): Deck 드롭다운 폐기 · Axis 선택 (useLearningFacade().axes).
+  const axisList = facade.data?.axes ?? [];
+  const activeAxisId = selectedAxisId ?? axisList[0]?.axisId ?? null;
 
   const canSubmit =
     summary.trim().length > 0 &&
     mainText.trim().length > 0 &&
     keywords.length > 0 &&
-    activeDeckId !== null;
+    activeAxisId !== null;
 
   const submit = () => {
-    if (!canSubmit || !activeDeckId) return;
+    if (!canSubmit || !activeAxisId) return;
     setInline(null);
     create.mutate(
       {
-        deckId: activeDeckId,
+        axisId: activeAxisId,
         summary: summary.trim(),
         mainText: mainText.trim(),
         keywords,
@@ -80,21 +80,22 @@ export function CreateCardForm({ onSuccess, footerSlot }: Props) {
 
       <label className="flex flex-col gap-2">
         <span className="font-mono text-[10px] uppercase tracking-[var(--tracking-mono)] text-cream-faint">
-          Deck
+          Axis
         </span>
-        {deckList.length === 0 ? (
+        {axisList.length === 0 ? (
           <div className="rounded-[8px] border border-dashed border-edge bg-paper-2 px-3 py-2 text-[12.5px] text-cream-faint">
-            먼저 사이드바에서 덱을 만들어주세요.
+            먼저 지도에서 축을 만들어주세요.
           </div>
         ) : (
           <select
-            value={activeDeckId ?? ''}
-            onChange={(e) => setSelectedDeckId(e.target.value || null)}
+            aria-label="axis"
+            value={activeAxisId ?? ''}
+            onChange={(e) => setSelectedAxisId(e.target.value || null)}
             className="rounded-[8px] border border-edge bg-surface px-3 py-2 text-sm text-cream outline-none focus:border-amber-line"
           >
-            {deckList.map((d) => (
-              <option key={d.deckId} value={d.deckId}>
-                {d.name}
+            {axisList.map((a) => (
+              <option key={a.axisId} value={a.axisId}>
+                {a.name}
               </option>
             ))}
           </select>

@@ -88,17 +88,17 @@ describe('returnToField', () => {
   });
 });
 
-describe('createCard', () => {
-  it('POSTs /api/v1/decks/{deckId}/cards with mainNote body', async () => {
+describe('createCard (M5 · Axis 재편)', () => {
+  it('POSTs /api/v1/axes/{axisId}/cards with mainNote body', async () => {
     mockPost.mockResolvedValue({ data: detail({ cardId: 7, status: 'ON_FIELD' }) });
     const r = await createCard({
-      deckId: '10',
+      axisId: 'axis-1',
       summary: 's',
       mainText: 'body',
       keywords: ['k'],
       tags: [],
     });
-    expect(mockPost).toHaveBeenCalledWith('/api/v1/decks/10/cards', {
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/axes/axis-1/cards', {
       mainNote: { textContent: 'body', imageUrl: null },
       keywords: ['k'],
       summary: 's',
@@ -108,14 +108,14 @@ describe('createCard', () => {
   });
 });
 
-describe('listArchiveCards', () => {
+describe('listArchiveCards (M5 · Axis 재편)', () => {
   it('returns empty array when no scope provided', async () => {
     const r = await listArchiveCards();
     expect(mockGet).not.toHaveBeenCalled();
     expect(r).toEqual([]);
   });
 
-  it('hits deck-scoped endpoint and filters ARCHIVE', async () => {
+  it('hits axis-scoped endpoint and filters ARCHIVE', async () => {
     mockGet.mockResolvedValue({
       data: [
         {
@@ -128,8 +128,8 @@ describe('listArchiveCards', () => {
         },
       ],
     });
-    const r = await listArchiveCards({ deckId: '10' });
-    expect(mockGet).toHaveBeenCalledWith('/api/v1/decks/10/cards');
+    const r = await listArchiveCards({ axisId: 'axis-1' });
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/axes/axis-1/cards');
     expect(r).toHaveLength(1);
     expect(r[0]!.summary).toBe('archived one');
   });

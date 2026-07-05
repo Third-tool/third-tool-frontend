@@ -64,7 +64,10 @@ export function LayerDetailPage() {
             </div>
             <h1 className="text-2xl font-semibold text-cream">{layer.name}</h1>
             {/* axisCount 는 M4 에서 axis 목록 API 정합 후 실 값 주입. 현재는 placeholder. */}
-            <LayerHeaderBadge deletedAt={layer.deletedAt ?? null} />
+            <LayerHeaderBadge
+              deletedAt={layer.deletedAt ?? null}
+              progressStatus={layer.progressStatus}
+            />
           </div>
           <div className="flex items-center gap-2">
             <Button

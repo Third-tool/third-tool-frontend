@@ -7,8 +7,6 @@ import { EmptyState } from '@/components/EmptyState';
 import { toastStore } from '@/lib/toast/toastQueue';
 import { useArchive } from './hooks/useArchive';
 import { useReturnToField } from './hooks/useReturnToField';
-import { useSelectedDeck } from '@/features/decks/DeckContext';
-import { useDecks } from '@/features/decks/hooks/useDecks';
 import type { Card as CardModel } from '@/lib/api/schemas/card';
 
 type Sort = 'recent' | 'oldest' | 'title';
@@ -22,10 +20,8 @@ const SORT_OPTIONS: Array<{ key: Sort; label: string }> = [
 const UNDO_MS = 5000;
 
 export function ArchivePage() {
-  const { selectedDeckId } = useSelectedDeck();
-  const decks = useDecks();
-  const activeDeckId = selectedDeckId ?? decks.data?.content[0]?.deckId ?? null;
-  const all = useArchive({ deckId: activeDeckId });
+  // M5 재편(2026-07-22+): Deck 스코프 폐기 · useArchive가 facade 전체 axes 순회.
+  const all = useArchive();
   const archiveCount = all.data?.length ?? 0;
   const ret = useReturnToField();
 

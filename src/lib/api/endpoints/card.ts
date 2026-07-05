@@ -133,6 +133,8 @@ export async function replaceCardKeywords(
   return adaptCardKeywords(raw);
 }
 
+// M5 재편(2026-07-22+): LT-E5-DECK-ABOLISH · POST /axes/{axisId}/cards.
+// 기존 /decks/{deckId}/cards 엔드포인트 폐기 · Card → Axis 직접 매핑.
 export async function createCard(payload: CreateCardRequest): Promise<Card> {
   const validated = CreateCardRequestSchema.parse(payload);
   const body = {
@@ -141,16 +143,15 @@ export async function createCard(payload: CreateCardRequest): Promise<Card> {
     summary: validated.summary,
     tags: validated.tags,
   };
-  const { data } = await apiClient.post(`/api/v1/decks/${validated.deckId}/cards`, body);
+  const { data } = await apiClient.post(`/api/v1/axes/${validated.axisId}/cards`, body);
   const raw = RawCardDetailSchema.parse(data);
   return adaptCardDetail(raw);
 }
 
-// Backend exposes archive only as a deck-scoped or tag-scoped list. ArchivePage
-// currently passes a tagId filter or null; when no tagId the caller must supply
-// a deckId so we can hit /api/v1/decks/{deckId}/cards and filter ARCHIVE locally.
+// M5 재편(2026-07-22+): Deck 폐기 후 archive filter는 axis 또는 tag 기반.
+// axisId 미지정 시 tagId만 있으면 tag-scope · 둘 다 없으면 빈 배열.
 interface ArchiveFilter {
-  deckId?: string;
+  axisId?: string;
   tagId?: string;
 }
 
@@ -164,12 +165,12 @@ export async function listArchiveCards(filter: ArchiveFilter = {}): Promise<Card
     const parsed = TagCardsSchema.parse(data);
     return parsed.archive.map((c) => adaptCardSummary(c));
   }
-  if (!filter.deckId) return [];
-  const { data } = await apiClient.get(`/api/v1/decks/${filter.deckId}/cards`);
+  if (!filter.axisId) return [];
+  const { data } = await apiClient.get(`/api/v1/axes/${filter.axisId}/cards`);
   const list = z.array(RawCardSummarySchema).parse(data);
   return list
     .filter((c) => c.status === 'ARCHIVE')
-    .map((c) => adaptCardSummary(c, filter.deckId));
+    .map((c) => adaptCardSummary(c));
 }
 
 // M5 신설(2026-07-22+): LT-E4-CARD-AXIS · Card → Axis 직접 매핑 대응.

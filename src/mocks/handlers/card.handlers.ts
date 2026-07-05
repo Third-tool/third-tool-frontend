@@ -538,6 +538,54 @@ export const cardHandlers = [
     return HttpResponse.json(list);
   }),
 
+  // M5 재편(2026-07-22+): LT-E5-DECK-ABOLISH · POST /axes/:axisId/cards.
+  // 기존 POST /decks/:deckId/cards 폐기 · Card → Axis 직접 매핑.
+  http.post('/api/v1/axes/:axisId/cards', async ({ params, request }) => {
+    const axisId = params.axisId as string;
+    const body = (await request.json()) as {
+      mainNote?: { textContent?: string };
+      keywords?: string[];
+      summary?: string;
+      tags?: string[];
+    };
+    if (!body.summary) {
+      return HttpResponse.json(
+        { code: 'CARD020', message: 'summary required' },
+        { status: 400 },
+      );
+    }
+    if (!body.keywords || body.keywords.length === 0) {
+      return HttpResponse.json(
+        { code: 'CARD031', message: 'keyword required' },
+        { status: 400 },
+      );
+    }
+    const id = state.nextId++;
+    const now = new Date().toISOString();
+    const createdMode = getScheduleMockState().schedule.mappedMode;
+    const card: MockCard = {
+      cardId: id,
+      // Deck 폐기 후 deckId=0 · 하위 호환용 최소 유지 (M6 이후 필드 제거 검토).
+      deckId: 0,
+      status: 'ON_FIELD',
+      enteredFieldAt: now,
+      viewCount: 0,
+      summary: body.summary,
+      keywords: body.keywords.map((value, i) => kw(state.nextId++ + i, value)),
+      tags: (body.tags ?? []).map((value, i) => tag(state.nextId++ + i, value)),
+      mainText: body.mainNote?.textContent ?? '',
+      lastViewedAt: null,
+      createdDate: now,
+      updatedDate: now,
+      createdMode,
+      archiveReason: null,
+      axisId,
+    };
+    state.cards.set(id, card);
+    persist();
+    return HttpResponse.json(toDetail(card), { status: 201 });
+  }),
+
   http.post('/api/v1/decks/:deckId/cards', async ({ params, request }) => {
     const deckId = Number(params.deckId);
     const body = (await request.json()) as {

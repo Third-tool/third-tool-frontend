@@ -4,8 +4,7 @@ import { track } from '@/lib/analytics/track';
 import { Icon } from '@/components/Icon';
 import { MarkdownView } from '@/components/MarkdownView';
 import { ApiError } from '@/lib/api/client';
-import { useSelectedDeck } from '@/features/decks/DeckContext';
-import { useDecks } from '@/features/decks/hooks/useDecks';
+import { useLearningFacade } from '@/features/auth/hooks/useLearningFacade';
 import { useStartReview, reviewSessionKey } from './hooks/useStartReview';
 import { useFlipToComparing } from './hooks/useFlipToComparing';
 import { useMoveToNext } from './hooks/useMoveToNext';
@@ -17,10 +16,11 @@ import { getReviewSession } from '@/lib/api/endpoints/review';
 import type { ReviewCard, ReviewSessionResponse } from '@/lib/api/schemas/review';
 
 export function StudyPage() {
-  const { selectedDeckId } = useSelectedDeck();
-  const decks = useDecks();
-  const defaultDeckId =
-    selectedDeckId ?? decks.data?.content[0]?.deckId ?? null;
+  // M5 재편(2026-07-22+): Deck 폐기 · Axis 기반 auto-start.
+  // 정상 흐름은 /review [학습 시작] → useReviewSession (batch 참조) · sessionId 응답.
+  // StudyPage 직접 진입 시 fallback: facade.axes[0]로 axis-scope 세션 시도.
+  const facade = useLearningFacade();
+  const defaultAxisId = facade.data?.axes[0]?.axisId ?? null;
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [completedCardCount, setCompletedCardCount] = useState(0);
@@ -44,12 +44,12 @@ export function StudyPage() {
   const session = sessionQuery.data ?? null;
 
   useEffect(() => {
-    if (!defaultDeckId) return;
-    if (startedRef.current === defaultDeckId) return;
-    startedRef.current = defaultDeckId;
+    if (!defaultAxisId) return;
+    if (startedRef.current === defaultAxisId) return;
+    startedRef.current = defaultAxisId;
     setStartError(null);
     setCompletedCardCount(0);
-    start.mutate(defaultDeckId, {
+    start.mutate(defaultAxisId, {
       onSuccess: (res) => {
         setSessionId(res.sessionId);
         track('review_session_opened', { totalCardCount: res.totalCardCount });
@@ -59,7 +59,7 @@ export function StudyPage() {
         setStartError(err instanceof ApiError ? err.message : '세션을 시작할 수 없어요.');
       },
     });
-  }, [defaultDeckId, start]);
+  }, [defaultAxisId, start]);
 
   useEffect(() => {
     if (session?.isFinished) track('review_session_completed');
@@ -94,7 +94,7 @@ export function StudyPage() {
   };
 
   const restart = () => {
-    if (!defaultDeckId) return;
+    if (!defaultAxisId) return;
     setSessionId(null);
     setCompletedCardCount(0);
     startedRef.current = null;
@@ -107,7 +107,7 @@ export function StudyPage() {
       <TopBar session={session} />
 
       <div className="relative z-10 flex flex-1 items-start justify-center px-7 pb-20 pt-2">
-        {!defaultDeckId && !decks.isLoading && <NoDeckPanel />}
+        {!defaultAxisId && !facade.isLoading && <NoDeckPanel />}
 
         {start.isPending && !session && (
           <LoadingPanel message="복습 세션을 준비하는 중…" />
@@ -450,18 +450,18 @@ function NoDeckPanel() {
         <Icon name="solar:folder-linear" width={30} height={30} />
       </div>
       <h1 className="m-0 mb-3 font-serif text-[32px] font-medium leading-[1.15] tracking-[-0.02em] text-cream break-keep">
-        먼저 덱을 만들어주세요
+        먼저 축을 만들어주세요
       </h1>
       <p className="m-0 mb-7 text-[14px] leading-[1.7] text-cream-mute break-keep">
-        복습 세션은 덱에 있는 카드로 시작돼요.
+        복습 세션은 축에 연결된 카드로 시작돼요.
       </p>
       <div className="flex justify-center gap-3">
         <Link
-          to="/decks"
+          to="/map"
           className="inline-flex items-center gap-2 rounded-full bg-amber px-6 py-3 text-[14px] font-medium text-white no-underline shadow-[0_10px_24px_-12px_rgba(196,103,63,0.65)] hover:bg-amber-deep"
         >
-          <Icon name="solar:add-folder-linear" width={15} height={15} />
-          덱 만들러 가기
+          <Icon name="solar:map-linear" width={15} height={15} />
+          지도로 이동
         </Link>
         <Link
           to="/home"

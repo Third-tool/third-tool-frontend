@@ -2,7 +2,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser';
-import { DeckSelector } from '@/features/decks/components/DeckSelector';
 
 interface NavItem {
   to: string;
@@ -12,6 +11,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/home', label: '오늘', icon: 'solar:sun-linear' },
+  { to: '/review', label: '학습', icon: 'solar:play-circle-linear' },
+  { to: '/dashboard', label: '대시보드', icon: 'solar:chart-linear' },
   { to: '/map', label: '지도', icon: 'solar:book-2-linear' },
   { to: '/archive', label: '보관함', icon: 'solar:archive-linear' },
   { to: '/tags', label: '태그', icon: 'solar:tag-linear' },
@@ -77,12 +78,6 @@ export function Sidebar({ contextSlot, archiveCount }: Props) {
           </NavLink>
         ))}
       </nav>
-
-      {user.data && (
-        <div className="mt-4">
-          <DeckSelector />
-        </div>
-      )}
 
       {contextSlot && <div className="mt-4">{contextSlot}</div>}
 

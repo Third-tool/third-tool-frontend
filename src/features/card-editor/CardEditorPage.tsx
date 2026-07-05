@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/Icon';
 import { MarkdownView } from '@/components/MarkdownView';
 import { useCreateCard } from '@/features/cards/hooks/useCreateCard';
-import { useSelectedDeck } from '@/features/decks/DeckContext';
-import { useDecks } from '@/features/decks/hooks/useDecks';
+import { useLearningFacade } from '@/features/auth/hooks/useLearningFacade';
 
 type Mode = 'edit' | 'preview';
 
@@ -23,9 +22,10 @@ const AI_DRAFT = (subject: string): string =>
 export function CardEditorPage() {
   const navigate = useNavigate();
   const create = useCreateCard();
-  const { selectedDeckId } = useSelectedDeck();
-  const decks = useDecks();
-  const activeDeckId = selectedDeckId ?? decks.data?.content[0]?.deckId ?? null;
+  const facade = useLearningFacade();
+  // M5 재편(2026-07-22+): Deck 폐기 · facade.axes[0] 기본 axis 사용.
+  // M6+ 세밀 UX (사용자가 axis 명시 선택)은 CreateCardForm 재사용으로 이관 검토.
+  const activeAxisId = facade.data?.axes[0]?.axisId ?? null;
 
   const [subject, setSubject] = useState('');
   const [goal, setGoal] = useState('');
@@ -117,10 +117,10 @@ export function CardEditorPage() {
   if (!summary.trim()) missing.push('요약');
 
   const onSave = () => {
-    if (!ready || !activeDeckId) return;
+    if (!ready || !activeAxisId) return;
     create.mutate(
       {
-        deckId: activeDeckId,
+        axisId: activeAxisId,
         summary: summary.trim(),
         mainText: note.trim(),
         keywords: keywords.length > 0 ? keywords : [subject.trim()],
