@@ -25,6 +25,7 @@ import { LayersListPage } from '@/features/layers/LayersListPage';
 import { LayerDetailPage } from '@/features/layers/LayerDetailPage';
 import { AxisDetailPage } from '@/features/axes/AxisDetailPage';
 import { DailyBatchLandingPage } from '@/features/review/DailyBatchLandingPage';
+import { LearningDashboardPage } from '@/features/review/LearningDashboardPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
@@ -60,6 +61,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute requireConcept>
         <DailyBatchLandingPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard',
+    element: (
+      <ProtectedRoute requireConcept>
+        <LearningDashboardPage />
       </ProtectedRoute>
     ),
   },
