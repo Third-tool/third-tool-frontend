@@ -10,6 +10,7 @@ import { suggestionHandlers } from './suggestion.handlers';
 import { axisRoadmapNodeHandlers } from './axisRoadmapNode.handlers';
 import { axisSelectionHandlers } from './axisSelection.handlers';
 import { dailyBatchHandlers } from './dailyBatch.handlers';
+import { dashboardHandlers } from './dashboard.handlers';
 
 export const handlers = [
   ...authHandlers,
@@ -24,4 +25,5 @@ export const handlers = [
   ...axisRoadmapNodeHandlers,
   ...axisSelectionHandlers,
   ...dailyBatchHandlers,
+  ...dashboardHandlers,
 ];
