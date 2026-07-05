@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LandingPage } from '@/features/landing/LandingPage';
 import { NotFoundPage } from '@/features/not-found/NotFoundPage';
 import { MaintenancePage } from '@/features/error/MaintenancePage';
@@ -16,7 +16,9 @@ import { MePage } from '@/features/me/MePage';
 import { MapPage } from '@/features/map/MapPage';
 import { TagsListPage } from '@/features/tags/TagsListPage';
 import { TagDetailPage } from '@/features/tags/TagDetailPage';
-import { DecksPage } from '@/features/decks/DecksPage';
+// M5 PR#3 (2026-07-22+): /decks · /decks/:deckId hard redirect → /review.
+// PR#1의 <DeckDeprecatedBanner>는 dead code (실 진입 불가) · PR#5에서 물리 삭제 예정.
+// 저장 URL 방어 6개월 유지 정책.
 import { ConceptsEditPage } from '@/features/learning-facade/ConceptsEditPage';
 import { LearningFacadePage } from '@/features/learning-facade/LearningFacadePage';
 import { LayersListPage } from '@/features/layers/LayersListPage';
@@ -111,11 +113,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/decks',
-    element: (
-      <ProtectedRoute requireConcept>
-        <DecksPage />
-      </ProtectedRoute>
-    ),
+    element: <Navigate to="/review" replace />,
+  },
+  {
+    path: '/decks/:deckId',
+    element: <Navigate to="/review" replace />,
   },
   {
     path: '/tags/:tagId',

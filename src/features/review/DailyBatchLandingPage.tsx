@@ -3,7 +3,9 @@ import { AppShell } from '@/components/AppShell';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/Skeleton';
 import { ApiError } from '@/lib/api/client';
+import { toastStore } from '@/lib/toast/toastQueue';
 import { useDailyBatch } from './hooks/useDailyBatch';
+import { useReviewSession } from './hooks/useReviewSession';
 import { DailyBatchProgress } from './components/DailyBatchProgress';
 import { CardQueueList } from './components/CardQueueList';
 import { BatchClosedBanner } from './components/BatchClosedBanner';
@@ -22,6 +24,7 @@ function formatBatchDate(batchDate: string): string {
 export function DailyBatchLandingPage() {
   const batch = useDailyBatch();
   const navigate = useNavigate();
+  const startSession = useReviewSession();
 
   const topbar = (
     <>
@@ -36,9 +39,19 @@ export function DailyBatchLandingPage() {
   );
 
   const onStart = () => {
-    // M5 PR#3 (REV E2 Session 재편) 착지 이후 실제 POST /review-sessions/from-batch 로 대체.
-    // 본 PR#2는 라우팅 shell만 · /study 진입점 자체는 M4 유지 유효.
-    navigate('/study');
+    if (!batch.data) return;
+    // M5 PR#3: batch 참조 세션 생성 · 이전 진행 중 세션은 자동 finish (useReviewSession).
+    // batchId는 batchDate로 대체 (BE Aggregate identity · UNIQUE(userId, batchDate)).
+    startSession.mutate(batch.data.batchDate, {
+      onSuccess: (res) => {
+        navigate(`/study?sessionId=${res.sessionId}`);
+      },
+      onError: (err) => {
+        const msg =
+          err instanceof ApiError ? err.message : '세션을 시작하지 못했어요.';
+        toastStore.push({ message: msg, tone: 'amber' });
+      },
+    });
   };
 
   return (
@@ -96,10 +109,11 @@ export function DailyBatchLandingPage() {
               <button
                 type="button"
                 onClick={onStart}
+                disabled={startSession.isPending}
                 aria-label="오늘 학습 시작"
-                className="inline-flex items-center gap-2 rounded-full border-0 bg-amber px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(196,103,63,0.65)] transition-all hover:-translate-y-px hover:bg-amber-deep"
+                className="inline-flex items-center gap-2 rounded-full border-0 bg-amber px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_rgba(196,103,63,0.65)] transition-all hover:-translate-y-px hover:bg-amber-deep disabled:opacity-50"
               >
-                학습 시작
+                {startSession.isPending ? '세션 시작 중…' : '학습 시작'}
               </button>
             </div>
           )}
