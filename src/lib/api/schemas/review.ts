@@ -114,6 +114,44 @@ export const StartReviewRequestSchema = z.object({
 });
 export type StartReviewRequest = z.infer<typeof StartReviewRequestSchema>;
 
+// M5 신설(2026-07-22+): product-review Epic 2 Story 2-1.
+// BE 이슈 #25 (Cross-Layer scope 재편) · Session이 daily batch를 원천으로 카드 pull.
+// deck-scope 세션 (`StartReviewRequest`)는 하위 호환 유지 · 신규 진입은 from-batch 사용.
+export const StartFromBatchRequestSchema = z.object({
+  batchId: z.string(),
+});
+export type StartFromBatchRequest = z.infer<typeof StartFromBatchRequestSchema>;
+
+// POST /api/v1/review-sessions/from-batch 응답 · 이전 세션 자동 finish 여부 포함.
+export const StartFromBatchResponseSchema = z.object({
+  sessionId: z.coerce.string(),
+  dailyBatchId: z.string().nullable().optional(),
+  totalCardCount: z.number().int().nonnegative(),
+  currentIndex: z.number().int().nonnegative(),
+  isFinished: z.boolean(),
+  currentCard: ReviewCardSchema.nullable(),
+  // BE가 이전 진행 중 세션을 자동 finish 처리했으면 previousSessionAutoFinished=true.
+  previousSessionAutoFinished: z.boolean().default(false),
+});
+export type StartFromBatchResponse = z.infer<typeof StartFromBatchResponseSchema>;
+
+// M5 신설(2026-07-22+): Story 2-3 record-view.
+// POST /api/v1/review-sessions/{sessionId}/record-view { cardId } · batch.markViewed 트리거.
+export const RecordViewRequestSchema = z.object({
+  cardId: z.string(),
+});
+export type RecordViewRequest = z.infer<typeof RecordViewRequestSchema>;
+
+export const RecordViewResponseSchema = z.object({
+  sessionId: z.coerce.string(),
+  cardId: z.coerce.string(),
+  viewedAt: z.string(),
+  // batch 동기화 결과 · UI progress 갱신용.
+  batchViewedCount: z.number().int().nonnegative(),
+  batchTotalCount: z.number().int().positive(),
+});
+export type RecordViewResponse = z.infer<typeof RecordViewResponseSchema>;
+
 export function adaptTodayCandidates(raw: TodayCandidates): ReviewSession {
   const cards: ReviewSessionCard[] = [];
   const breakdown = { DAY_1: 0, DAY_3: 0, DAY_7: 0 };
